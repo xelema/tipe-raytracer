@@ -1,9 +1,13 @@
 #include <stdio.h>
 #include <math.h>
 #include <stdbool.h>
+#include <stdlib.h>
+#include <time.h>
 
 #include "vec3.h"
 #include "ray.h"
+#include "hitinfo.h"
+#include "sphere.h"
 
 const double ratio = 16.0 / 9.0;
 const int largeur_image = 1000;
@@ -18,33 +22,78 @@ void base_ppm(){
     printf("P3\n%d %d\n255\n", largeur_image, hauteur_image);
 }
 
+const color red = {{1, 0, 0}};
+const color green = {{0, 1, 0}};
+const color blue = {{0, 0, 1}};
+const color white = {{1,1,1}};
+const color black = {{0,0,0}};
+const point3 light = {{-1, -1, -1}}; // position de la lumière
+
 ///////////////////////////////////////////////////////////////////////////////////////////////
 
 
-double hit_sphere(point3 center, double radius, ray r){
+HitInfo hit_sphere(point3 center, double radius, ray r){
+
+    HitInfo hitInfo;
+    hitInfo.didHit=false; 
+
+    //si delta>0 alors sphere il y a
+
+    vec3 oc = sub(r.origin, center);
     double a = vec3_dot(r.dir, r.dir);
-    double b = 2.0*vec3_dot(sub(r.origin, center), r.dir);
-    double c = vec3_dot(sub(r.origin, center), sub(r.origin, center)) - radius*radius;
+    double b = 2.0*vec3_dot(oc, r.dir);
+    double c = vec3_dot(oc, oc) - radius*radius;
+    
     double discriminant = b*b - 4*a*c;
-    if (discriminant < 0){
-        return -1.0;
+
+    if (discriminant >= 0){
+        double t1 = (-b -sqrt(discriminant))/(2*a);
+        double t2 = (-b +sqrt(discriminant))/(2*a);
+        
+        if (t1 >= 0){
+            hitInfo.didHit = true;
+            hitInfo.dst = t1;
+            hitInfo.hitPoint = ray_at(r, t1);
+            hitInfo.normal = vec3_normalize(sub(ray_at(r, t1), center));
+        }
+        else if (t2 >= 0){
+            hitInfo.didHit = true;
+            hitInfo.dst = t2;
+            hitInfo.hitPoint = ray_at(r, t2);
+            hitInfo.normal = vec3_normalize(sub(ray_at(r, t2), center));
+        }
     }
-    else{ //si delta >= 0 alors il y a la sphere
-        return (-b - sqrt(discriminant) ) / (2.0*a);
+    return hitInfo;
+}
+
+HitInfo closest_hit(ray r){
+
+    sphere sphere_list[3] = {
+    {{{-0.2,-0.4,-1}}, 0.5, red},      // boule rouge en bas
+    {{{0,-999.8,-1}}, 999.5, green},   // sol (grosse sphere)
+    {{{1, 0.5, -4}}, 1, blue},         // boule bleu en fond
+    };
+
+    HitInfo closestHit;
+    closestHit.didHit=false;
+    closestHit.dst=INFINITY; // rien touché pour l'instant
+
+    for(int i=0; i < 3 /*nbSpheres*/ ; i++){
+        sphere s = sphere_list[i];
+        HitInfo hitInfo =  hit_sphere(s.center, s.radius, r);
+
+        if (hitInfo.didHit && hitInfo.dst < closestHit.dst){
+            closestHit = hitInfo;
+            closestHit.mat = s.mat;
+        }
     }
+    return closestHit;
 }
 
 color ray_color(ray r) {
-    color black = {{0.0, 0.0, 0.0}};
-    color blue = {{0.0, 0.0, 1.0}};
-
-    point3 center = {{0,0,-1}};
-    double d = hit_sphere(center, 0.5, r);
-    if (d > 0.0){
-        vec3 N = vec3_normalize(sub(ray_at(r, d), center));
-        vec3 resN = add_scalar(multiply_scalar(N, 0.5), 0.5);
-        // permet d'avoir des valeurs entre 0 et 1 et pas -1 et 1
-        return resN;
+    HitInfo t = closest_hit(r);
+    if (t.didHit == true){
+        return t.mat;
     }
     else{
         return black;
