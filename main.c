@@ -24,9 +24,9 @@ void write_color(FILE *out, color pixel_color) {
     
     double rapport = 1.0/nbRayonParPixel;
 
-    r = r*rapport;
-    g = g*rapport;
-    b = b*rapport;
+    r = sqrtf(rapport*r);
+    g = sqrtf(rapport*g);
+    b = sqrtf(rapport*b);
 
     // ecrit la valeur transposée de [0,255] de chaque composante de couleur (rgb)
     fprintf(out, "%d %d %d\n", (int)(256 * clamp(r, 0.0, 0.999)), (int)(256 * clamp(g, 0.0, 0.999)), (int)(256 * clamp(b, 0.0, 0.999)));
@@ -185,8 +185,8 @@ int main(){
             color pixel_color = black;
       
             for (int x=0; x<nbRayonParPixel; ++x){
-                double u = (double)i/(largeur_image-1);
-                double v = (double)j/(hauteur_image-1);
+                double u = ((double)i+randomDouble(-0.5, 0.5))/(largeur_image-1);
+                double v = ((double)j+randomDouble(-0.5, 0.5))/(hauteur_image-1);
 
                 ray r = {origin, add(coin_bas_gauche, add(multiply_scalar(horizontal, u), sub(multiply_scalar(vertical, v), origin)))}; 
                 // origine = (0,0,0) et direction = coin_bas_gauche + u*horizontal + v*vertical - origine) : pour faire tout les points du viewport

@@ -14,10 +14,8 @@ const double ratio = 16.0/9.0;
 const int largeur_image = 1000;
 const int hauteur_image = (int)(largeur_image / ratio);
 
-
-
 const int nbRayonParPixel = 100;
-const int nbRebondMax = 2;
+const int nbRebondMax = 5;
 
 const int profondeurMax = 5;
 
