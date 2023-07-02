@@ -8,26 +8,45 @@
 #include "ray.h"
 #include "hitinfo.h"
 #include "sphere.h"
+#include "rtutility.h"
 
-const double ratio = 16.0 / 9.0;
-const int largeur_image = 1000;
-const int hauteur_image = (int)(largeur_image / ratio);
 
-void write_color(FILE *out, color pixel_color){
-    // ecrit la valeur transposée de [0,255] de chaque composante de couleur (rgb)
-    fprintf(out, "%d %d %d\n", (int)(255 * pixel_color.e[0]), (int)(255 * pixel_color.e[1]), (int)(255 * pixel_color.e[2]));
+double clamp(double x, double min, double max){
+    if (x<min) return min;
+    if (x>max) return max;
+    return x;
 }
+
+void write_color(FILE *out, color pixel_color) {
+    double r = pixel_color.e[0];
+    double g = pixel_color.e[1];
+    double b = pixel_color.e[2];
+    
+    double rapport = 1.0/nbRayonParPixel;
+
+    r = r*rapport;
+    g = g*rapport;
+    b = b*rapport;
+
+    // ecrit la valeur transposée de [0,255] de chaque composante de couleur (rgb)
+    fprintf(out, "%d %d %d\n", (int)(256 * clamp(r, 0.0, 0.999)), (int)(256 * clamp(g, 0.0, 0.999)), (int)(256 * clamp(b, 0.0, 0.999)));
+}
+
 
 void base_ppm(){
     printf("P3\n%d %d\n255\n", largeur_image, hauteur_image);
 }
 
-const color red = {{1, 0, 0}};
-const color green = {{0, 1, 0}};
-const color blue = {{0, 0, 1}};
-const color white = {{1,1,1}};
-const color black = {{0,0,0}};
-const point3 light = {{-1, -1, -1}}; // position de la lumière
+const sphere sphere_list[4] = {
+    {{{-0.2,-0.4,-1}}, 0.5, {{{1, 0.384, 0.384}}, {{0.0, 0.0, 0.0}}, 0.0}},       
+    // sphere rouge : couleure rouge, emission noire, force d'emission 0
+    {{{0,-299.8,-1}}, 299.5, {{{0.416, 0.949, 0.298}}, {{0.0, 0.0, 0.0}}, 0.0}},  
+    // sol (sphere verte) : couleure verte, emission noire, force d'emission 0
+    {{{1, 0.5, -4}}, 1, {{{0.843, 0.118, 0.99}}, {{0.0, 0.0, 0.0}}, 0.0}},           
+    // sphere violette : couleure violette, emission noire, force d'emission 0
+    {{{40, 20, -40}}, 20.0, {{{0.0, 0.0, 0.0}}, {{1.0, 1.0, 1.0}}, 8.0}},                
+    // LUMIERE : couleure noire, emission blanche, force d'emission 8
+    };
 
 ///////////////////////////////////////////////////////////////////////////////////////////////
 
@@ -67,18 +86,13 @@ HitInfo hit_sphere(point3 center, double radius, ray r){
 }
 
 HitInfo closest_hit(ray r){
-
-    sphere sphere_list[3] = {
-    {{{-0.2,-0.4,-1}}, 0.5, red},      // boule rouge en bas
-    {{{0,-999.8,-1}}, 999.5, green},   // sol (grosse sphere)
-    {{{1, 0.5, -4}}, 1, blue},         // boule bleu en fond
-    };
+    int nbSpheres = 4;
 
     HitInfo closestHit;
     closestHit.didHit=false;
     closestHit.dst=INFINITY; // rien touché pour l'instant
 
-    for(int i=0; i < 3 /*nbSpheres*/ ; i++){
+    for(int i=0; i < nbSpheres ; i++){
         sphere s = sphere_list[i];
         HitInfo hitInfo =  hit_sphere(s.center, s.radius, r);
 
@@ -90,14 +104,60 @@ HitInfo closest_hit(ray r){
     return closestHit;
 }
 
-color ray_color(ray r) {
-    HitInfo t = closest_hit(r);
-    if (t.didHit == true){
-        return t.mat;
+double random_value_sphere(){
+    double theta = 2*pi*(double)rand()/RAND_MAX; 
+    // rand()/RAND_MAX = valeur aléatoire entre 0 et 1
+    double rho = sqrt(-2*log((double)rand()/RAND_MAX));
+    return rho * cos(theta);
+}
+
+vec3 random_direction(){
+    double x = random_value_sphere();
+    double y = random_value_sphere();
+    double z = random_value_sphere();
+    point3 point_in_sphere = {{x, y, z}};
+    return vec3_normalize(point_in_sphere);
+}
+
+vec3 bon_sens(vec3 normal){
+    vec3 dir = random_direction();
+    if (vec3_dot(dir, normal) >= 0){
+        return dir;
     }
     else{
-        return black;
+        return vec3_negate(dir);
     }
+}
+
+point3 tracer(ray r){
+
+    color incomingLight = black;
+    color rayColor = white;
+
+    for (int i = 0; i<nbRebondMax; i++){
+
+        HitInfo hitInfo = closest_hit(r);
+
+        if (hitInfo.didHit){
+            r.origin = hitInfo.hitPoint;
+            r.dir = bon_sens(hitInfo.normal);
+
+            material mat = hitInfo.mat;
+
+            color emittedLight = multiply_scalar(mat.emissionColor, mat.emissionStrength);
+            incomingLight = add(incomingLight,multiply(emittedLight, rayColor));
+            rayColor = multiply(mat.diffuseColor, rayColor); 
+        }
+        else{
+            break;
+        }
+    }
+    return incomingLight;
+}
+
+color ray_color(ray r) {
+    color t = tracer(r);
+    return t;
 }
 
 int main(){
@@ -119,20 +179,25 @@ int main(){
     // render
     base_ppm();
     
-    for (int j = hauteur_image - 1; j >= 0; j--){
-        for (int i = 0; i < largeur_image; i++){
+    for (int j = hauteur_image - 1; j >= 0  ; --j) { 
+        for (int i = 0; i < largeur_image; ++i) { 
 
-            double u = (double)i/(largeur_image-1);
-            double v = (double)j/(hauteur_image-1);
+            color pixel_color = black;
+      
+            for (int x=0; x<nbRayonParPixel; ++x){
+                double u = (double)i/(largeur_image-1);
+                double v = (double)j/(hauteur_image-1);
 
-            ray r = {origin, add(coin_bas_gauche, add(multiply_scalar(horizontal, u), sub(multiply_scalar(vertical, v), origin)))}; 
-            // origine = (0,0,0) et direction = coin_bas_gauche + u*horizontal + v*vertical - origine) 
-            // pour faire tout les pixels du viewport
+                ray r = {origin, add(coin_bas_gauche, add(multiply_scalar(horizontal, u), sub(multiply_scalar(vertical, v), origin)))}; 
+                // origine = (0,0,0) et direction = coin_bas_gauche + u*horizontal + v*vertical - origine) : pour faire tout les points du viewport
             
-            color pixel_color = ray_color(r);
+                pixel_color = add(pixel_color, ray_color(r));
+            }
+            
             write_color(stdout, pixel_color);
         }
     }
+
 
 	return 0;
 }

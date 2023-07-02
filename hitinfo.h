@@ -9,7 +9,7 @@ typedef struct{
     double dst;
     point3 hitPoint;
     vec3 normal;
-    color mat;
+    material mat;
 } HitInfo;
 
 #endif

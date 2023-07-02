@@ -4,17 +4,15 @@
 #include "vec3.h"
 
 typedef struct {
-    color color;
+    color diffuseColor;
     color emissionColor;
-    double emissionStrenght;
+    double emissionStrength;
 } material;
 
 typedef struct Sphere{
     point3 center;
     double radius;
-    color mat;
+    material mat;
 } sphere;
-
-const double pi = 3.1415926535897932385;
 
 #endif  
