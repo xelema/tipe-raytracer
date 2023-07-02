@@ -3,6 +3,7 @@
 #include <stdbool.h>
 #include <stdlib.h>
 #include <time.h>
+#include <sys/time.h>
 
 #include "vec3.h"
 #include "ray.h"
@@ -10,46 +11,30 @@
 #include "sphere.h"
 #include "rtutility.h"
 
-
-double clamp(double x, double min, double max){
-    if (x<min) return min;
-    if (x>max) return max;
-    return x;
-}
-
-void write_color(FILE *out, color pixel_color) {
-    double r = pixel_color.e[0];
-    double g = pixel_color.e[1];
-    double b = pixel_color.e[2];
-    
-    double rapport = 1.0/nbRayonParPixel;
-
-    r = sqrtf(rapport*r);
-    g = sqrtf(rapport*g);
-    b = sqrtf(rapport*b);
-
-    // ecrit la valeur transposée de [0,255] de chaque composante de couleur (rgb)
-    fprintf(out, "%d %d %d\n", (int)(256 * clamp(r, 0.0, 0.999)), (int)(256 * clamp(g, 0.0, 0.999)), (int)(256 * clamp(b, 0.0, 0.999)));
-}
-
-
-void base_ppm(){
-    printf("P3\n%d %d\n255\n", largeur_image, hauteur_image);
-}
-
-const sphere sphere_list[4] = {
-    {{{-0.2,-0.4,-1}}, 0.5, {{{1, 0.384, 0.384}}, {{0.0, 0.0, 0.0}}, 0.0}},       
-    // sphere rouge : couleure rouge, emission noire, force d'emission 0
-    {{{0,-299.8,-1}}, 299.5, {{{0.416, 0.949, 0.298}}, {{0.0, 0.0, 0.0}}, 0.0}},  
-    // sol (sphere verte) : couleure verte, emission noire, force d'emission 0
-    {{{1, 0.5, -4}}, 1, {{{0.843, 0.118, 0.99}}, {{0.0, 0.0, 0.0}}, 0.0}},           
-    // sphere violette : couleure violette, emission noire, force d'emission 0
-    {{{40, 20, -40}}, 20.0, {{{0.0, 0.0, 0.0}}, {{1.0, 1.0, 1.0}}, 8.0}},                
-    // LUMIERE : couleure noire, emission blanche, force d'emission 8
+const sphere sphere_list[10] = {
+    {{{-501,0,0}}, 500, {GREEN, BLACK, 0.0}},                 
+    // mur gauche vert
+    {{{0,-501,0}}, 500, {WHITE, BLACK, 0.0}},                 
+    // sol blanc
+    {{{501, 0, 0}}, 500, {RED, BLACK, 0.0}},                  
+    // mur droite rouge
+    {{{-0.5, 1.4, -3}}, 0.5, {BLACK, {{1.0, 0.6, 0.2}}, 8.0}},   
+    // LUMIERE (couleure noire, emission ORANGE)
+    {{{0.5, 1.4, -3}}, 0.5, {BLACK, {{0.7, 0.2, 1.0}}, 8.0}},   
+    // LUMIERE (couleure noire, emission VIOLETTE)
+    {{{-0.5, -1.4, -3}}, 0.5, {BLACK, {{0.55, 0.863, 1.0}}, 5.0}},   
+    // LUMIERE (couleure noire, emission CYAN)
+    {{{0.5, -1.4, -3}}, 0.5, {BLACK, {{0.431, 1.0, 0.596}}, 5.0}},   
+    // LUMIERE (couleure noire, emission VERT FLUO)
+    {{{0, 0, -504}}, 500, {WHITE, BLACK, 0.0}},               
+    // fond blanc
+    {{{0, 501, 0}}, 500, {WHITE, BLACK, 0.0}},                
+    // plafond blanc
+    {{{0, 0, -3}}, 0.5, {SKY, BLACK, 0.0}}                    
+    // boule bleue centrale (couleur ciel)
     };
 
 ///////////////////////////////////////////////////////////////////////////////////////////////
-
 
 HitInfo hit_sphere(point3 center, double radius, ray r){
 
@@ -86,7 +71,7 @@ HitInfo hit_sphere(point3 center, double radius, ray r){
 }
 
 HitInfo closest_hit(ray r){
-    int nbSpheres = 4;
+    int nbSpheres = sizeof(sphere_list) / sizeof(sphere_list[0]);
 
     HitInfo closestHit;
     closestHit.didHit=false;
@@ -104,35 +89,11 @@ HitInfo closest_hit(ray r){
     return closestHit;
 }
 
-double random_value_sphere(){
-    double theta = 2*pi*(double)rand()/RAND_MAX; 
-    // rand()/RAND_MAX = valeur aléatoire entre 0 et 1
-    double rho = sqrt(-2*log((double)rand()/RAND_MAX));
-    return rho * cos(theta);
-}
-
-vec3 random_direction(){
-    double x = random_value_sphere();
-    double y = random_value_sphere();
-    double z = random_value_sphere();
-    point3 point_in_sphere = {{x, y, z}};
-    return vec3_normalize(point_in_sphere);
-}
-
-vec3 bon_sens(vec3 normal){
-    vec3 dir = random_direction();
-    if (vec3_dot(dir, normal) >= 0){
-        return dir;
-    }
-    else{
-        return vec3_negate(dir);
-    }
-}
 
 point3 tracer(ray r){
 
-    color incomingLight = black;
-    color rayColor = white;
+    color incomingLight = BLACK;
+    color rayColor = WHITE;
 
     for (int i = 0; i<nbRebondMax; i++){
 
@@ -145,8 +106,11 @@ point3 tracer(ray r){
             material mat = hitInfo.mat;
 
             color emittedLight = multiply_scalar(mat.emissionColor, mat.emissionStrength);
+
+            double lightStrength = vec3_dot(hitInfo.normal, r.dir); // Loi de Lambert
+
             incomingLight = add(incomingLight,multiply(emittedLight, rayColor));
-            rayColor = multiply(mat.diffuseColor, rayColor); 
+            rayColor = multiply(multiply_scalar(mat.diffuseColor, lightStrength*2 /*trop sombre sinon*/ ), rayColor); 
         }
         else{
             break;
@@ -161,10 +125,23 @@ color ray_color(ray r) {
 }
 
 int main(){
+    
+    // temps d'execution
+    struct timeval start_time, end_time;
+    gettimeofday (&start_time, NULL);
+
+    // nom du fichier
+    char nomFichier[100];
+    time_t maintenant = time(NULL); // Obtenir l'heure actuelle
+    struct tm *temps = localtime(&maintenant); // Convertir en structure tm
+
+    sprintf(nomFichier, "newscene_lambertslaw_%dRAYS_%dRB_%02d-%02d_%02dh%02d.ppm", nbRayonParPixel, nbRebondMax-1, temps->tm_mday, temps->tm_mon + 1, temps->tm_hour, temps->tm_min);
+
+
+    FILE *fichier = fopen(nomFichier, "w");
 
     // camera
-
-    double hauteur_viewport = 2.0;
+    double hauteur_viewport = 1.0;
     double largeur_viewport = ratio*hauteur_viewport;
     double focal_length = 1.0;
 
@@ -177,12 +154,14 @@ int main(){
 
     
     // render
-    base_ppm();
+    base_ppm(fichier);
     
-    for (int j = hauteur_image - 1; j >= 0  ; --j) { 
+    for (int j = hauteur_image - 1; j >= 0  ; --j) {
+        fprintf(stderr, "\rLignes restantes: %d ", j); //debug dans la console
+        fflush(stderr);  
         for (int i = 0; i < largeur_image; ++i) { 
 
-            color pixel_color = black;
+            color pixel_color = BLACK;
       
             for (int x=0; x<nbRayonParPixel; ++x){
                 double u = ((double)i+randomDouble(-0.5, 0.5))/(largeur_image-1);
@@ -193,11 +172,18 @@ int main(){
             
                 pixel_color = add(pixel_color, ray_color(r));
             }
-            
-            write_color(stdout, pixel_color);
+            write_color(fichier, pixel_color);
         }
     }
+    fclose(fichier);
 
+    
+    gettimeofday(&end_time, NULL);
+
+    long seconds = end_time.tv_sec - start_time.tv_sec;
+
+    fprintf(stderr, "\nFini.\n");
+    fprintf(stderr, "\nTemps d'exécution : %ld min %ld sec\n", seconds / 60, seconds % 60);
 
 	return 0;
 }
