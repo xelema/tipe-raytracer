@@ -14,7 +14,7 @@ const double ratio = 16.0/10.0;
 const int largeur_image = 1000;
 const int hauteur_image = (int)(largeur_image / ratio);
 
-const int nbRayonParPixel = 10;
+const int nbRayonParPixel = 100;
 const int nbRebondMax = 5;
 
 #define NUM_THREADS 16
