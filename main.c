@@ -101,7 +101,7 @@ point3 tracer(ray r){
 
         if (hitInfo.didHit){
             r.origin = hitInfo.hitPoint;
-            r.dir = bon_sens(hitInfo.normal);
+            r.dir = random_dir(hitInfo.normal);
 
             material mat = hitInfo.mat;
 
