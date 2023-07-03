@@ -1,0 +1,48 @@
+#ifndef CAMERA_H
+#define CAMERA_H
+
+
+#include "rtutility.h"
+#include "vec3.h"
+
+// camera
+
+typedef struct {
+    point3 origin;
+    vec3 horizontal;
+    vec3 vertical;
+    point3 coin_bas_gauche;
+} camera;
+
+camera init_camera(){
+
+    camera cam;
+    double hauteur_viewport = 1.0;
+    double largeur_viewport = ratio * hauteur_viewport;
+    double focal_length = 1.0;
+    vec3 focal_length_vec = {{0, 0, focal_length}};
+
+    point3 origin = {{0, 0, 0}};
+    cam.origin = origin;
+
+    vec3 horizontal ={{largeur_viewport, 0, 0}};
+    cam.horizontal = horizontal;
+
+    vec3 vertical = {{0, hauteur_viewport, 0}};
+    cam.vertical = vertical;
+
+    cam.coin_bas_gauche = sub(cam.origin, add(divide(cam.horizontal,2), add(divide(cam.vertical, 2), focal_length_vec)));
+    //coin_bas_gauche = origin - horizontal/2 - vertical/2 - profondeur
+
+    return cam;
+}
+
+ray get_ray(double u, double v, camera cam){
+    ray res;
+    res.origin = cam.origin;
+    res.dir = add(cam.coin_bas_gauche, add(multiply_scalar(cam.horizontal, u), sub(multiply_scalar(cam.vertical, v), cam.origin)));
+    return res;
+}
+
+
+#endif

@@ -4,12 +4,14 @@
 #include <stdlib.h>
 #include <time.h>
 #include <sys/time.h>
+#include <pthread.h>
 
 #include "vec3.h"
 #include "ray.h"
 #include "hitinfo.h"
 #include "sphere.h"
 #include "rtutility.h"
+#include "camera.h"
 
 const sphere sphere_list[10] = {
     {{{-501,0,0}}, 500, {GREEN, BLACK, 0.0}},                 
@@ -33,6 +35,16 @@ const sphere sphere_list[10] = {
     {{{0, 0, -3}}, 0.5, {SKY, BLACK, 0.0}}                    
     // boule bleue centrale (couleur ciel)
     };
+
+struct ThreadData {
+    int start_row;
+    int end_row;
+    color* canva;
+    camera cam;
+};
+
+int total_pixels = largeur_image * hauteur_image;
+int rendered_pixels = 0;
 
 ///////////////////////////////////////////////////////////////////////////////////////////////
 
@@ -124,6 +136,39 @@ color ray_color(ray r) {
     return t;
 }
 
+void* fill_canva(void *arg) {
+    struct ThreadData* data = (struct ThreadData*)arg;
+
+    for (int j = data->start_row; j >= data->end_row; --j) {
+
+        // debug (affichage en %)
+        rendered_pixels += largeur_image;
+
+        int update_frequency = total_pixels / 100;
+        if (rendered_pixels % update_frequency == 0) {
+            int percentage = (rendered_pixels * 100) / total_pixels;
+            fprintf(stderr, "Progression : %d%%\n", percentage);
+            fflush(stderr); 
+        }
+
+        for (int i = 0; i < largeur_image; i++) {
+            color totalLight = BLACK;
+            
+            for (int x = 0; x < nbRayonParPixel; ++x) {
+                double u = ((double)i + randomDouble(-0.5, 0.5))/(largeur_image-1);
+                double v = ((double)j + randomDouble(-0.5, 0.5))/(hauteur_image-1);
+
+                ray r = get_ray(u, v, data->cam);
+                totalLight = add(totalLight, ray_color(r));
+            }
+
+            data->canva[j*largeur_image+i] = write_color_canva(totalLight);
+        }
+    }
+
+    pthread_exit(NULL);
+}
+
 int main(){
     
     // temps d'execution
@@ -135,54 +180,60 @@ int main(){
     time_t maintenant = time(NULL); // Obtenir l'heure actuelle
     struct tm *temps = localtime(&maintenant); // Convertir en structure tm
 
-    sprintf(nomFichier, "newscene_lambertslaw_%dRAYS_%dRB_%02d-%02d_%02dh%02d.ppm", nbRayonParPixel, nbRebondMax-1, temps->tm_mday, temps->tm_mon + 1, temps->tm_hour, temps->tm_min);
+    sprintf(nomFichier, "multithreading_%dRAYS_%dRB_%02d-%02d_%02dh%02d.ppm", nbRayonParPixel, nbRebondMax-1, temps->tm_mday, temps->tm_mon + 1, temps->tm_hour, temps->tm_min);
 
 
     FILE *fichier = fopen(nomFichier, "w");
 
     // camera
-    double hauteur_viewport = 1.0;
-    double largeur_viewport = ratio*hauteur_viewport;
-    double focal_length = 1.0;
+    camera cam = init_camera();
 
-    point3 origin = {{0, 0, 0}};
-    vec3 horizontal = {{largeur_viewport, 0, 0}};
-    vec3 vertical = {{0, hauteur_viewport, 0}};
-    vec3 focal_length_vec = {{0, 0, focal_length}};
-    vec3 coin_bas_gauche = sub(origin, add(divide(horizontal,2), add(divide(vertical, 2), focal_length_vec))); 
-    //coin_bas_gauche = origin - horizontal/2 - vertical/2 - profondeur
+    // tableau pour avoir chaque valeur de pixel au bon endroit (multithread)
+    color* canva = (color*)malloc((largeur_image*hauteur_image)*sizeof(struct Vec3));
+    for (int i = 0; i < largeur_image*hauteur_image; i++) {
+        canva[i] = (color)BLACK;
+    }
 
-    
-    // render
     base_ppm(fichier);
     
-    for (int j = hauteur_image - 1; j >= 0  ; --j) {
-        fprintf(stderr, "\rLignes restantes: %d ", j); //debug dans la console
-        fflush(stderr);  
-        for (int i = 0; i < largeur_image; ++i) { 
+    // création des threads
 
-            color pixel_color = BLACK;
-      
-            for (int x=0; x<nbRayonParPixel; ++x){
-                double u = ((double)i+randomDouble(-0.5, 0.5))/(largeur_image-1);
-                double v = ((double)j+randomDouble(-0.5, 0.5))/(hauteur_image-1);
+    pthread_t threads[NUM_THREADS];
+    struct ThreadData thread_data[NUM_THREADS];
 
-                ray r = {origin, add(coin_bas_gauche, add(multiply_scalar(horizontal, u), sub(multiply_scalar(vertical, v), origin)))}; 
-                // origine = (0,0,0) et direction = coin_bas_gauche + u*horizontal + v*vertical - origine) : pour faire tout les points du viewport
-            
-                pixel_color = add(pixel_color, ray_color(r));
-            }
-            write_color(fichier, pixel_color);
+    int rows_per_thread = hauteur_image / NUM_THREADS;
+    int remaining_rows = hauteur_image % NUM_THREADS;
+    int start_row = hauteur_image - 1;
+
+    for (int i = 0; i < NUM_THREADS; i++) {
+        int end_row = start_row - rows_per_thread + 1;
+
+        if (i == NUM_THREADS - 1) {
+            end_row -= remaining_rows;
         }
+
+        thread_data[i].start_row = start_row;
+        thread_data[i].end_row = end_row;
+        thread_data[i].canva = canva;
+        thread_data[i].cam = cam;
+
+        pthread_create(&threads[i], NULL, fill_canva, (void*)&thread_data[i]);
+
+        start_row = end_row - 1;
     }
+
+    for (int i = 0; i < NUM_THREADS; i++) {
+        pthread_join(threads[i], NULL);
+    }
+
+    canva_to_ppm(fichier, canva);
     fclose(fichier);
 
-    
     gettimeofday(&end_time, NULL);
 
     long seconds = end_time.tv_sec - start_time.tv_sec;
 
-    fprintf(stderr, "\nFini.\n");
+    fprintf(stderr, "Fini.\n");
     fprintf(stderr, "\nTemps d'exécution : %ld min %ld sec\n", seconds / 60, seconds % 60);
 
 	return 0;

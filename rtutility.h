@@ -14,8 +14,12 @@ const double ratio = 16.0/10.0;
 const int largeur_image = 1000;
 const int hauteur_image = (int)(largeur_image / ratio);
 
-const int nbRayonParPixel = 100;
+const int nbRayonParPixel = 10;
 const int nbRebondMax = 5;
+
+#define NUM_THREADS 16
+
+
 
 #define RED {{1, 0, 0}}
 #define GREEN {{0, 1, 0}}
@@ -55,6 +59,30 @@ void base_ppm(FILE *out){
     fprintf(out, "P3\n%d %d\n255\n", largeur_image, hauteur_image);
 }
 
+color write_color_canva(color pixel_color){
+    
+    double r = pixel_color.e[0];
+    double g = pixel_color.e[1];
+    double b = pixel_color.e[2];
+    
+    double rapport = 1.0/nbRayonParPixel;
+
+    r = sqrtf(rapport*r);
+    g = sqrtf(rapport*g);
+    b = sqrtf(rapport*b);
+
+    // ecrit la valeur transposée de [0,255] de chaque composante de couleur (rgb)
+    color res = {{(int)(256 * clamp(r, 0.0, 0.999)), (int)(256 * clamp(g, 0.0, 0.999)), (int)(256 * clamp(b, 0.0, 0.999))}};
+    return res;
+}
+
+void canva_to_ppm(FILE *out, color* canva){
+    for (int j = hauteur_image-1; j >= 0  ; j--){ 
+        for (int i = 0; i < largeur_image; i++){
+            fprintf(out, "%d %d %d\n", (int)canva[j*largeur_image+i].e[0], (int)canva[j*largeur_image+i].e[1], (int)canva[j*largeur_image+i].e[2]);
+        }
+    }
+}
 
 // rebond aleatoire (path tracing)
 double random_value_sphere(){
