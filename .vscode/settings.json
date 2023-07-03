@@ -1,7 +1,0 @@
-{
-    "files.associations": {
-        "rtutility.h": "c",
-        "sphere.h": "c",
-        "camera.h": "c"
-    }
-}
