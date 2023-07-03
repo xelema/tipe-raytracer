@@ -2,7 +2,7 @@
 Implémentation d'un Ray Tracer pour mon exposé de TIPE.
 
 # Paramètres
-Les paramètres de rendu se trouvent dans `rtutility.h` :
+- Les paramètres de rendu se trouvent dans `rtutility.h` :
 
 ```C
 const double ratio = 16.0/10.0;
@@ -14,7 +14,7 @@ const int nbRayonParPixel = 100;
 const int nbRebondMax = 5;
 ```
 
-Les positions des sphères dans `main.c` :
+- Les positions des sphères dans `main.c` :
 
 ```C
 const sphere sphere_list[10] = {
@@ -32,8 +32,19 @@ const sphere sphere_list[10] = {
 ```
 
 # Rendu
-Il suffit de compiler le programme puis de l'éxecuter, le nom du fichier se trouve dans `main.c` :
+- Il suffit de compiler le programme puis de l'éxecuter, le nom du fichier se trouve dans `main.c` :
 
 ```C
 sprintf(nomFichier, "newscene_lambertslaw_%dRAYS_%dRB_%02d-%02d_%02dh%02d.ppm", nbRayonParPixel, nbRebondMax-1, temps->tm_mday, temps->tm_mon + 1, temps->tm_hour, temps->tm_min);
 ```
+
+# Multithreading
+
+- Modifier `#define NUM_THREADS 16` par la valeur souhaitée dans `rtutility.h`
+- Compiler avec
+  ```sh
+  gcc -o prog main.c -lm -lpthread
+  ```
+
+
+
