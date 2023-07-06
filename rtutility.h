@@ -84,39 +84,30 @@ void canva_to_ppm(FILE *out, color* canva){
     }
 }
 
-// rebond aleatoire (path tracing)
-double random_value_sphere(){
-    double theta = 2*pi*(double)rand()/RAND_MAX; 
-    // rand()/RAND_MAX = valeur aléatoire entre 0 et 1
-    double rho = sqrt(-2*log((double)rand()/RAND_MAX));
-    return rho * cos(theta);
-}
+// direction aléatoire
+vec3 random_dir(vec3 normal){
+    vec3 dir;
 
-vec3 random_direction(){
-    double x = random_value_sphere();
-    double y = random_value_sphere();
-    double z = random_value_sphere();
-    point3 point_in_sphere = {{x, y, z}};
-    return vec3_normalize(point_in_sphere);
-}
+    double u = rand()/(RAND_MAX + 1.0);
+    double v = rand()/(RAND_MAX + 1.0);
+    
+    double theta = 2*pi*u;
+    double phi = acos(2*v - 1);
 
-vec3 bon_sens(vec3 normal){
-    vec3 dir = random_direction();
+    dir.e[0] = cos(theta)*sin(phi);
+    dir.e[1] = sin(theta)*sin(phi);
+    dir.e[2] = cos(phi);
+
     if (vec3_dot(dir, normal) >= 0){
-        return dir;
+        return vec3_normalize(dir);
     }
     else{
-        return vec3_negate(dir);
+        return vec3_negate(vec3_normalize(dir));
     }
-}
-
-// fonctions de random
-double randomDouble1(){
-    return (rand()/(RAND_MAX + 1.0)); // retourne un double random entre 0 inclu et 1 exclu
 }
 
 double randomDouble(double min, double max){
-    return min + (max-min)*randomDouble1();
+    return min + (max-min)*(rand()/(RAND_MAX + 1.0));
 }
 
 #endif
