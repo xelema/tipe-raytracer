@@ -38,7 +38,6 @@ const sphere sphere_list[10] = {
 sprintf(nomFichier, "newscene_lambertslaw_%dRAYS_%dRB_%02d-%02d_%02dh%02d.ppm", nbRayonParPixel, nbRebondMax-1, temps->tm_mday, temps->tm_mon + 1, temps->tm_hour, temps->tm_min);
 ```
 
-<<<<<<< HEAD
 # Multithreading
 
 - Modifier `#define NUM_THREADS 16` par la valeur souhaitée dans `rtutility.h`
@@ -47,7 +46,5 @@ sprintf(nomFichier, "newscene_lambertslaw_%dRAYS_%dRB_%02d-%02d_%02dh%02d.ppm", 
   gcc -o prog main.c -lm -lpthread -O3
   ```
 
-=======
->>>>>>> f042e5564d15f4138fc01888ec0cdc09d8fe56a1
 
 
