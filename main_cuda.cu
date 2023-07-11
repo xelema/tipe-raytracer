@@ -3,11 +3,12 @@
 #include <stdbool.h>
 #include <stdlib.h>
 #include <time.h>
+#include <cuda_runtime.h>
 
 #include "vec3.hu"
-#include "ray.h"
-#include "hitinfo.h"
-#include "sphere.h"
+#include "ray.hu"
+#include "hitinfo.hu"
+#include "sphere.hu"
 #include "rtutility.h"
 #include "camera.h"
 

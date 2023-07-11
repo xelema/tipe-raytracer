@@ -1,0 +1,31 @@
+#ifndef RAY_H
+#define RAY_H
+
+#include "vec3.hu"
+
+typedef struct Ray{
+    point3 origin;
+    vec3 dir;
+} ray;
+
+__host__ __device__ ray create_ray(point3 origin, vec3 direction){
+    ray r;
+    r.origin = origin;
+    r.dir = direction;
+    return r;
+}
+
+__host__ __device__ point3 ray_origin(ray r){
+    return r.origin;
+}
+
+__host__ __device__ vec3 ray_direction(ray r){
+    return r.dir;
+}
+
+__host__ __device__ point3 ray_at(ray r, double t){
+    // P(t) = A + tB avec t la longueur, A l'origine et B la direction
+    return add(r.origin, multiply_scalar(r.dir, t));
+}
+
+#endif
