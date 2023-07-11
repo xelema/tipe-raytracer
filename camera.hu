@@ -14,11 +14,11 @@ typedef struct {
     point3 coin_bas_gauche;
 } camera;
 
-__host__ __device__ camera init_camera(){
+__host__ __device__ camera init_camera(double ratio){
 
     camera cam;
     double hauteur_viewport = 1.0;
-    double largeur_viewport = 16.0/10.0 * hauteur_viewport;
+    double largeur_viewport = ratio * hauteur_viewport;
     double focal_length = 1.0;
     vec3 focal_length_vec = {{0, 0, focal_length}};
 

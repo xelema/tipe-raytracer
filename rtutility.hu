@@ -10,16 +10,6 @@
 
 // constantes
 
-__constant__ const double ratio = 16.0/10.0;
-
-__constant__ const int largeur_image = 1000;
-__constant__ const int hauteur_image = 1000/(16.0/10.0);
-
-__constant__ const int nbRayonParPixel = 100;
-__constant__ const int nbRebondMax = 5;
-
-#define NUM_THREADS 16
-
 #define RED {{1, 0, 0}}
 #define GREEN {{0, 1, 0}}
 #define BLUE {{0, 0, 1}}
@@ -27,8 +17,6 @@ __constant__ const int nbRebondMax = 5;
 #define BLACK {{0, 0, 0}}
 #define SKY {{0.784, 0.965, 1}}
 const point3 light = {{-1, -1, -1}}; // position de la lumière -> pour "fake shadow"
-
-const double pi = 3.1415926535897932385;
 
 // fonctions
 
@@ -38,7 +26,7 @@ __host__ __device__ double clamp(double x, double min, double max){
     return x;
 }
 
-__host__ __device__ color write_color_canva(color pixel_color){
+__host__ __device__ color write_color_canva(color pixel_color, int nbRayonParPixel){
     
     double r = pixel_color.e[0];
     double g = pixel_color.e[1];

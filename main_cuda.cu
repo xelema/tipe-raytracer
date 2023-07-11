@@ -91,7 +91,7 @@ __device__ HitInfo closest_hit(ray r){
 }
 
 
-__device__ point3 tracer(ray r, curandState* globalState, int ind){
+__device__ point3 tracer(ray r, int nbRebondMax, curandState* globalState, int ind){
 
     color incomingLight = BLACK;
     color rayColor = WHITE;
@@ -145,14 +145,31 @@ __global__ void render_kernel(color* canva, int image_width, int image_height, i
             double v = ((double)j + randomDouble(states, ind, -0.5, 0.5))/(image_height-1);
 
             ray r = get_ray(u, v, cam);
-            totalLight = add(totalLight, tracer(r, states, ind));
+            totalLight = add(totalLight, tracer(r, nbRebondMax, states, ind));
         }
 
-        canva[pixel_index] = write_color_canva(totalLight);
+        canva[pixel_index] = write_color_canva(totalLight, nbRayonParPixel);
     }
 }
 
 int main(){
+
+    // CONSTANTES (paramètres de rendu)
+    ////////////////////////////////////////////////////////
+    ////////////////////////////////////////////////////////
+
+    double ratio = 4.0 / 3.0;
+    int largeur_image = 1200;
+    int hauteur_image = (int)(largeur_image / ratio);
+
+    int nbRayonParPixel = 1000;
+    int nbRebondMax = 6;
+    
+    int nbThreadsX = 8; // peut dépendre des GPU
+    int nbThreadsY = 8; 
+
+    ////////////////////////////////////////////////////////
+    ////////////////////////////////////////////////////////
     
     // temps d'execution
     cudaEvent_t start, stop;
@@ -173,10 +190,10 @@ int main(){
     FILE *fichier = fopen(nomFichier, "w");
 
     // camera
-    camera cam = init_camera();
+    camera cam = init_camera(ratio);
 
     // tableau pour avoir chaque valeur de pixel au bon endroit (multithread et CUDA du coup)
-    color* canva = (color*)malloc((largeur_image*hauteur_image)*sizeof(struct Vec3));
+    color* canva = (color*)malloc((largeur_image * hauteur_image)*sizeof(struct Vec3));
     for (int i = 0; i < largeur_image*hauteur_image; i++) {
         canva[i] = BLACK;
     }
@@ -186,8 +203,6 @@ int main(){
     cudaMalloc((void**)&canva_device, (largeur_image * hauteur_image)*sizeof(color));
 
     // défini la taille des blocks et threads
-    int nbThreadsX = 8; // peut dépendre des GPU
-    int nbThreadsY = 8; 
     dim3 blocks(largeur_image/nbThreadsX+1, hauteur_image/nbThreadsY+1);
     dim3 threads(nbThreadsX, nbThreadsY);
 
