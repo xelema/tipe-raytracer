@@ -70,7 +70,7 @@ Avec ces paramètres :
     int nbRayonParPixel = 1000;
     int nbRebondMax = 6;
     
-    int nbThreadsX = 8; // peut dépendre des GPU
+    int nbThreadsX = 8;
     int nbThreadsY = 8; 
 ```
-![image_rendered](https://i.ibb.co/4NZSQrd/CUDA-1000-RAYS-5-RB-11-07-15h36.png)
+![image_rendered](https://github.com/xelema/tipe-raytracer/blob/a124fd085db0d1ac1ac3c800215fecaf7c41918e/results/CUDA_1000RAYS_5RB_11-07_15h36.png)
