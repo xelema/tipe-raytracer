@@ -9,10 +9,10 @@
 #include "ray.hu"
 #include "hitinfo.hu"
 #include "sphere.hu"
-#include "rtutility.h"
-#include "camera.h"
+#include "rtutility.hu"
+#include "camera.hu"
 
-const sphere sphere_list[10] = {
+__constant__ const sphere sphere_list[10] = {
     {{{-501,0,0}}, 500, {GREEN, BLACK, 0.0}},                 
     // mur gauche vert
     {{{0,-501,0}}, 500, {WHITE, BLACK, 0.0}},                 
@@ -35,19 +35,9 @@ const sphere sphere_list[10] = {
     // boule bleue centrale (couleur ciel)
     };
 
-struct ThreadData {
-    int start_row;
-    int end_row;
-    color* canva;
-    camera cam;
-};
-
-int total_pixels = largeur_image * hauteur_image;
-int rendered_pixels = 0;
-
 ///////////////////////////////////////////////////////////////////////////////////////////////
 
-HitInfo hit_sphere(point3 center, double radius, ray r){
+__device__ HitInfo hit_sphere(point3 center, double radius, ray r){
 
     HitInfo hitInfo;
     hitInfo.didHit=false; 
@@ -81,7 +71,7 @@ HitInfo hit_sphere(point3 center, double radius, ray r){
     return hitInfo;
 }
 
-HitInfo closest_hit(ray r){
+__device__ HitInfo closest_hit(ray r){
     int nbSpheres = sizeof(sphere_list) / sizeof(sphere_list[0]);
 
     HitInfo closestHit;
@@ -101,7 +91,7 @@ HitInfo closest_hit(ray r){
 }
 
 
-point3 tracer(ray r){
+__device__ point3 tracer(ray r, curandState* globalState, int ind){
 
     color incomingLight = BLACK;
     color rayColor = WHITE;
@@ -112,7 +102,7 @@ point3 tracer(ray r){
 
         if (hitInfo.didHit){
             r.origin = hitInfo.hitPoint;
-            r.dir = random_dir(hitInfo.normal);
+            r.dir = random_dir(hitInfo.normal, globalState, ind);
 
             material mat = hitInfo.mat;
 
@@ -130,56 +120,54 @@ point3 tracer(ray r){
     return incomingLight;
 }
 
-color ray_color(ray r) {
-    color t = tracer(r);
-    return t;
+__global__ void init_curand_state(curandState* states, int width, int height) {
+    int i = blockIdx.x * blockDim.x + threadIdx.x;
+    int j = blockIdx.y * blockDim.y + threadIdx.y;
+    int ind = j * gridDim.x * blockDim.x + i;
+
+    // chaque thread a le meme seed
+    if (i < width && j < height)
+        curand_init(6969, ind, 0, &states[ind]);
 }
 
-void* fill_canva(void *arg) {
-    struct ThreadData* data = (struct ThreadData*)arg;
+__global__ void render_kernel(color* canva, int image_width, int image_height, int nbRayonParPixel, int nbRebondMax, camera cam, curandState* states) {
+    int i = blockIdx.x * blockDim.x + threadIdx.x;
+    int j = blockIdx.y * blockDim.y + threadIdx.y;
+    int ind = j * gridDim.x * blockDim.x + i;
 
-    for (int j = data->start_row; j >= data->end_row; --j) {
-
-        // debug (affichage en %)
-        rendered_pixels += largeur_image;
-
-        int update_frequency = total_pixels / 100;
-        if (rendered_pixels % update_frequency == 0) {
-            int percentage = (rendered_pixels * 100) / total_pixels;
-            fprintf(stderr, "Progression : %d%%\n", percentage);
-            fflush(stderr); 
-        }
-
-        for (int i = 0; i < largeur_image; i++) {
-            color totalLight = BLACK;
+    if (i < image_width && j < image_height){
+        int pixel_index = j*image_width+i;
+        color totalLight = BLACK;
+        
+        for (int k=0; k<nbRayonParPixel; ++k){
             
-            for (int x = 0; x < nbRayonParPixel; ++x) {
-                double u = ((double)i + randomDouble(-0.5, 0.5))/(largeur_image-1);
-                double v = ((double)j + randomDouble(-0.5, 0.5))/(hauteur_image-1);
+            double u = ((double)i + randomDouble(states, ind, -0.5, 0.5))/(image_width-1);
+            double v = ((double)j + randomDouble(states, ind, -0.5, 0.5))/(image_height-1);
 
-                ray r = get_ray(u, v, data->cam);
-                totalLight = add(totalLight, ray_color(r));
-            }
-
-            data->canva[j*largeur_image+i] = write_color_canva(totalLight);
+            ray r = get_ray(u, v, cam);
+            totalLight = add(totalLight, tracer(r, states, ind));
         }
-    }
 
-    pthread_exit(NULL);
+        canva[pixel_index] = write_color_canva(totalLight);
+    }
 }
 
 int main(){
     
     // temps d'execution
-    struct timeval start_time, end_time;
-    gettimeofday (&start_time, NULL);
+    cudaEvent_t start, stop;
+    float elapsedTime;
+
+    cudaEventCreate(&start);
+    cudaEventCreate(&stop);
+    cudaEventRecord(start, 0);
 
     // nom du fichier
     char nomFichier[100];
     time_t maintenant = time(NULL); // Obtenir l'heure actuelle
     struct tm *temps = localtime(&maintenant); // Convertir en structure tm
 
-    sprintf(nomFichier, "multithreading_%dRAYS_%dRB_%02d-%02d_%02dh%02d.ppm", nbRayonParPixel, nbRebondMax-1, temps->tm_mday, temps->tm_mon + 1, temps->tm_hour, temps->tm_min);
+    sprintf(nomFichier, "CUDA_%dRAYS_%dRB_%02d-%02d_%02dh%02d.ppm", nbRayonParPixel, nbRebondMax-1, temps->tm_mday, temps->tm_mon + 1, temps->tm_hour, temps->tm_min);
 
 
     FILE *fichier = fopen(nomFichier, "w");
@@ -187,53 +175,58 @@ int main(){
     // camera
     camera cam = init_camera();
 
-    // tableau pour avoir chaque valeur de pixel au bon endroit (multithread)
+    // tableau pour avoir chaque valeur de pixel au bon endroit (multithread et CUDA du coup)
     color* canva = (color*)malloc((largeur_image*hauteur_image)*sizeof(struct Vec3));
     for (int i = 0; i < largeur_image*hauteur_image; i++) {
-        canva[i] = (color)BLACK;
+        canva[i] = BLACK;
     }
 
-    base_ppm(fichier);
-    
-    // création des threads
+    // alloue la mémoire pour canva sur le device (gpu)
+    color* canva_device;
+    cudaMalloc((void**)&canva_device, (largeur_image * hauteur_image)*sizeof(color));
 
-    pthread_t threads[NUM_THREADS];
-    struct ThreadData thread_data[NUM_THREADS];
+    // défini la taille des blocks et threads
+    int nbThreadsX = 8; // peut dépendre des GPU
+    int nbThreadsY = 8; 
+    dim3 blocks(largeur_image/nbThreadsX+1, hauteur_image/nbThreadsY+1);
+    dim3 threads(nbThreadsX, nbThreadsY);
 
-    int rows_per_thread = hauteur_image / NUM_THREADS;
-    int remaining_rows = hauteur_image % NUM_THREADS;
-    int start_row = hauteur_image - 1;
+    // alloue la mémoire pour states sur le device (gpu)
+    curandState* states;
+    cudaMalloc((void**) &states, (largeur_image * hauteur_image) * sizeof(curandState));
 
-    for (int i = 0; i < NUM_THREADS; i++) {
-        int end_row = start_row - rows_per_thread + 1;
+    // initialise les "states" pour la fonction de random
+    init_curand_state<<<blocks, threads>>>(states, largeur_image, hauteur_image);
 
-        if (i == NUM_THREADS - 1) {
-            end_row -= remaining_rows;
+    // lance le kernel avec le nb de thread défini
+    render_kernel<<<blocks, threads>>>(canva_device, largeur_image, hauteur_image, nbRayonParPixel, nbRebondMax, cam, states);
+
+    // copie le canva du device (gpu) vers l'host (cpu), puis free la mémoire du canva sur device
+    cudaMemcpy(canva, canva_device, (largeur_image * hauteur_image)*sizeof(color), cudaMemcpyDeviceToHost);
+    cudaFree(canva_device);
+
+    // base_ppm() et canva_to_ppm() réécrits ici
+    fprintf(fichier, "P3\n%d %d\n255\n", largeur_image, hauteur_image);
+    for (int j = hauteur_image-1; j >= 0  ; j--){ 
+        for (int i = 0; i < largeur_image; i++){
+            fprintf(fichier, "%d %d %d\n", (int)canva[j*largeur_image+i].e[0], (int)canva[j*largeur_image+i].e[1], (int)canva[j*largeur_image+i].e[2]);
         }
-
-        thread_data[i].start_row = start_row;
-        thread_data[i].end_row = end_row;
-        thread_data[i].canva = canva;
-        thread_data[i].cam = cam;
-
-        pthread_create(&threads[i], NULL, fill_canva, (void*)&thread_data[i]);
-
-        start_row = end_row - 1;
     }
-
-    for (int i = 0; i < NUM_THREADS; i++) {
-        pthread_join(threads[i], NULL);
-    }
-
-    canva_to_ppm(fichier, canva);
+    
     fclose(fichier);
 
-    gettimeofday(&end_time, NULL);
+    // enregistrer le moment d'arrivée
+    cudaEventRecord(stop, 0);
+    cudaEventSynchronize(stop);
+    cudaEventElapsedTime(&elapsedTime, start, stop);
+    int minutes = (int)(elapsedTime / 60000);
+    int seconds = (int)((elapsedTime - minutes * 60000) / 1000);
+    
+    fprintf(stderr, "\nFini.\n");
+    fprintf(stderr, "Temps de rendu : %d min %d sec\n", minutes, seconds);
 
-    long seconds = end_time.tv_sec - start_time.tv_sec;
-
-    fprintf(stderr, "Fini.\n");
-    fprintf(stderr, "\nTemps d'exécution : %ld min %ld sec\n", seconds / 60, seconds % 60);
+    cudaEventDestroy(start);
+    cudaEventDestroy(stop);
 
 	return 0;
 }
