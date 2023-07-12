@@ -63,6 +63,16 @@ __device__ double randomDouble(curandState* globalState, int ind, double min, do
     return min + (max-min)*randomDouble1(globalState, ind);
 }
 
+__global__ void init_curand_state(curandState* states, int width, int height) {
+    int i = blockIdx.x * blockDim.x + threadIdx.x;
+    int j = blockIdx.y * blockDim.y + threadIdx.y;
+    int ind = j * gridDim.x * blockDim.x + i;
+
+    // chaque thread a le meme seed
+    if (i < width && j < height)
+        curand_init(6969, ind, 0, &states[ind]);
+}
+
 // direction aléatoire
 __device__ vec3 random_dir(vec3 normal, curandState* globalState, int ind){
     vec3 dir;
@@ -83,6 +93,22 @@ __device__ vec3 random_dir(vec3 normal, curandState* globalState, int ind){
     else{
         return vec3_negate(vec3_normalize(dir));
     }
+}
+
+__device__ vec3 random_dir_no_norm(curandState* globalState, int ind){
+    vec3 dir;
+
+    double u = randomDouble1(globalState, ind);
+    double v = randomDouble1(globalState, ind);
+    
+    double theta = 2*3.1415926535897932385*u;
+    double phi = acos(2*v - 1);
+
+    dir.e[0] = cos(theta)*sin(phi);
+    dir.e[1] = sin(theta)*sin(phi);
+    dir.e[2] = cos(phi);
+
+    return vec3_normalize(dir);
 }
 
 #endif

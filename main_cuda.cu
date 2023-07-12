@@ -4,6 +4,8 @@
 #include <stdlib.h>
 #include <time.h>
 #include <cuda_runtime.h>
+#include <OpenImageDenoise/oidn.h>
+#include <OpenImageDenoise/oidn.hpp>
 
 #include "vec3.hu"
 #include "ray.hu"
@@ -12,27 +14,35 @@
 #include "rtutility.hu"
 #include "camera.hu"
 
-__constant__ const sphere sphere_list[10] = {
+__constant__ const sphere sphere_list[7] = {
+    //MURS//
     {{{-501,0,0}}, 500, {GREEN, BLACK, 0.0}},                 
     // mur gauche vert
     {{{0,-501,0}}, 500, {WHITE, BLACK, 0.0}},                 
     // sol blanc
     {{{501, 0, 0}}, 500, {RED, BLACK, 0.0}},                  
     // mur droite rouge
-    {{{-0.5, 1.4, -3}}, 0.5, {BLACK, {{1.0, 0.6, 0.2}}, 8.0}},   
-    // LUMIERE (couleure noire, emission ORANGE)
-    {{{0.5, 1.4, -3}}, 0.5, {BLACK, {{0.7, 0.2, 1.0}}, 8.0}},   
-    // LUMIERE (couleure noire, emission VIOLETTE)
-    {{{-0.5, -1.4, -3}}, 0.5, {BLACK, {{0.55, 0.863, 1.0}}, 5.0}},   
-    // LUMIERE (couleure noire, emission CYAN)
-    {{{0.5, -1.4, -3}}, 0.5, {BLACK, {{0.431, 1.0, 0.596}}, 5.0}},   
-    // LUMIERE (couleure noire, emission VERT FLUO)
     {{{0, 0, -504}}, 500, {WHITE, BLACK, 0.0}},               
     // fond blanc
     {{{0, 501, 0}}, 500, {WHITE, BLACK, 0.0}},                
     // plafond blanc
-    {{{0, 0, -3}}, 0.5, {SKY, BLACK, 0.0}}                    
+
+    //SPHERES//
+    {{{0, -0.5, -3}}, 0.5, {SKY, BLACK, 0.0}},        
     // boule bleue centrale (couleur ciel)
+
+    {{{0, 1.4, -3}}, 0.5, {BLACK, WHITE, 30.0}},        
+    // lumière
+
+    // //LUMIERES//
+    // {{{-1, 1, 1.1}}, 0.5, {BLACK, {{1.0, 0.6, 0.2}}, 5.0}},   
+    // // LUMIERE (couleure noire, emission ORANGE)
+    // {{{1, 1, 1.1}}, 0.5, {BLACK, {{0.7, 0.2, 1.0}}, 5.0}},   
+    // // LUMIERE (couleure noire, emission VIOLETTE)
+    // {{{-1, -1, 1.1}}, 0.5, {BLACK, {{0.55, 0.863, 1.0}}, 5.0}},   
+    // // LUMIERE (couleure noire, emission CYAN)
+    // {{{1, -1, 1.1}}, 0.5, {BLACK, {{0.431, 1.0, 0.596}}, 5.0}} 
+    // // LUMIERE (couleure noire, emission VERT FLUO)
     };
 
 ///////////////////////////////////////////////////////////////////////////////////////////////
@@ -90,7 +100,6 @@ __device__ HitInfo closest_hit(ray r){
     return closestHit;
 }
 
-
 __device__ point3 tracer(ray r, int nbRebondMax, curandState* globalState, int ind){
 
     color incomingLight = BLACK;
@@ -102,32 +111,19 @@ __device__ point3 tracer(ray r, int nbRebondMax, curandState* globalState, int i
 
         if (hitInfo.didHit){
             r.origin = hitInfo.hitPoint;
-            r.dir = random_dir(hitInfo.normal, globalState, ind);
+            r.dir = vec3_normalize(add(hitInfo.normal,random_dir_no_norm(globalState, ind))); // sebastian lague
 
             material mat = hitInfo.mat;
-
             color emittedLight = multiply_scalar(mat.emissionColor, mat.emissionStrength);
 
-            double lightStrength = vec3_dot(hitInfo.normal, r.dir); // Loi de Lambert
-
             incomingLight = add(incomingLight,multiply(emittedLight, rayColor));
-            rayColor = multiply(multiply_scalar(mat.diffuseColor, lightStrength*2 /*trop sombre sinon*/ ), rayColor); 
+            rayColor = multiply(mat.diffuseColor, rayColor); 
         }
         else{
             break;
         }
     }
     return incomingLight;
-}
-
-__global__ void init_curand_state(curandState* states, int width, int height) {
-    int i = blockIdx.x * blockDim.x + threadIdx.x;
-    int j = blockIdx.y * blockDim.y + threadIdx.y;
-    int ind = j * gridDim.x * blockDim.x + i;
-
-    // chaque thread a le meme seed
-    if (i < width && j < height)
-        curand_init(6969, ind, 0, &states[ind]);
 }
 
 __global__ void render_kernel(color* canva, int image_width, int image_height, int nbRayonParPixel, int nbRebondMax, camera cam, curandState* states) {
@@ -159,10 +155,10 @@ int main(){
     ////////////////////////////////////////////////////////
 
     double ratio = 4.0 / 3.0;
-    int largeur_image = 1200;
+    int largeur_image = 1000;
     int hauteur_image = (int)(largeur_image / ratio);
 
-    int nbRayonParPixel = 1000;
+    int nbRayonParPixel = 2000;
     int nbRebondMax = 6;
     
     int nbThreadsX = 8; // peut dépendre des GPU
@@ -220,8 +216,43 @@ int main(){
     cudaMemcpy(canva, canva_device, (largeur_image * hauteur_image)*sizeof(color), cudaMemcpyDeviceToHost);
     cudaFree(canva_device);
 
+    // canva vers un array de float pour réduire le bruit avec OIDN
+    float* floatImage = (float*)malloc(largeur_image * hauteur_image * 3 * sizeof(float));
+    for (int i = 0; i < largeur_image * hauteur_image; i++) {
+        floatImage[3*i] = (float)canva[i].e[0] / 255.0f;
+        floatImage[3*i+1] = (float)canva[i].e[1] / 255.0f;
+        floatImage[3*i+2] = (float)canva[i].e[2] / 255.0f;
+    }
+
+    // initialise le device OIDN
+    oidn::DeviceRef device = oidn::newDevice();
+    device.commit();
+
+    // crée le filtre ("RT" est pour raytracing)
+    oidn::FilterRef filter = device.newFilter("RT");
+    filter.setImage("color", floatImage, oidn::Format::Float3, largeur_image, hauteur_image);
+    filter.setImage("output", floatImage, oidn::Format::Float3, largeur_image, hauteur_image);
+    filter.commit();
+    
+    // applique le filtre
+    filter.execute();
+
+    // check les erreurs du denoise
+    const char* errorMessage;
+    if (device.getError(errorMessage) != oidn::Error::None) {
+        printf("Error in Open Image Denoise: %s\n", errorMessage);
+    }
+
+    // retransfère les valeurs dans canva
+    for (int i = 0; i < largeur_image * hauteur_image; i++) {
+        canva[i].e[0] = (int)(floatImage[3*i] * 255.0f);
+        canva[i].e[1] = (int)(floatImage[3*i+1] * 255.0f);
+        canva[i].e[2] = (int)(floatImage[3*i+2] * 255.0f);
+    }
+
     // base_ppm() et canva_to_ppm() réécrits ici
     fprintf(fichier, "P3\n%d %d\n255\n", largeur_image, hauteur_image);
+
     for (int j = hauteur_image-1; j >= 0  ; j--){ 
         for (int i = 0; i < largeur_image; i++){
             fprintf(fichier, "%d %d %d\n", (int)canva[j*largeur_image+i].e[0], (int)canva[j*largeur_image+i].e[1], (int)canva[j*largeur_image+i].e[2]);
