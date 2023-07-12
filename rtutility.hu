@@ -43,7 +43,11 @@ __host__ __device__ color write_color_canva(color pixel_color, int nbRayonParPix
     return res;
 }
 
-// void canva_to_ppm(FILE *out, color* canva){
+// __host__ __device__ void base_ppm(FILE *out, int largeur_image, int hauteur_image){
+//     fprintf(out, "P3\n%d %d\n255\n", largeur_image, hauteur_image);
+// }
+
+// __host__ __device__ void canva_to_ppm(FILE *out, color* canva, int largeur_image, int hauteur_image){
 //     for (int j = hauteur_image-1; j >= 0  ; j--){ 
 //         for (int i = 0; i < largeur_image; i++){
 //             fprintf(out, "%d %d %d\n", (int)canva[j*largeur_image+i].e[0], (int)canva[j*largeur_image+i].e[1], (int)canva[j*largeur_image+i].e[2]);
