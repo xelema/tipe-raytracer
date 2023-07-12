@@ -33,8 +33,7 @@ const sphere sphere_list[10] = {
     };
 ```
 
-# Rendu
-- Il suffit de compiler le programme puis de l'éxecuter, le nom du fichier se trouve dans `main_cuda.cu` :
+- Le nom du fichier se trouve dans `main_cuda.cu` :
 
 ```C
     sprintf(nomFichier, "CUDA_%dRAYS_%dRB_%02d-%02d_%02dh%02d.ppm", nbRayonParPixel, nbRebondMax-1, temps->tm_mday, temps->tm_mon + 1, temps->tm_hour, temps->tm_min);
@@ -74,3 +73,12 @@ Avec ces paramètres :
     int nbThreadsY = 8; 
 ```
 ![image_rendered](https://github.com/xelema/tipe-raytracer/blob/a124fd085db0d1ac1ac3c800215fecaf7c41918e/results/CUDA_1000RAYS_5RB_11-07_15h36.png)
+
+# Denoiser (Intel Open Image Denoise)
+
+### SANS
+![without](https://github.com/xelema/tipe-raytracer/blob/ece72fb18e277437a994bfc02aebaf22de634972/results/without_denoise_5000RAYS_5RB_12-07_23h43.png)
+
+### AVEC
+![with](https://github.com/xelema/tipe-raytracer/blob/ece72fb18e277437a994bfc02aebaf22de634972/results/with_denoise_5000RAYS_5RB_12-07_23h34.png)
+
