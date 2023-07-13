@@ -25,7 +25,7 @@ __host__ __device__ void render_normal_albedo(vec3* normal, color* albedo, int h
                 normal[pixel_index] = hitInfo.normal;
 
                 if (hitInfo.mat.emissionStrength > 0.0){
-                    albedo[pixel_index] = WHITE;
+                    albedo[pixel_index] = hitInfo.mat.emissionColor;
                 }
                 else{
                     albedo[pixel_index] = hitInfo.mat.diffuseColor;

@@ -125,8 +125,13 @@ int main(){
     int largeur_image = 1000;
     int hauteur_image = (int)(largeur_image / ratio);
 
-    int nbRayonParPixel = 101;
-    int nbRebondMax = 6;
+    double vfov = 110; // fov vertical en degrée
+    point3 origin = {{-0.9, 0.9, -3.8}}; // position de la camera
+    point3 target = {{0.2, 0, -2.8}}; // cible de la camera
+    vec3 up = {{0, 1, 0.2}}; // permet de modifier la rotation selon l'axe z (garder comme ça pour horizontal)
+
+    int nbRayonParPixel = 15000;
+    int nbRebondMax = 4;
     
     int nbThreadsX = 8; // peut dépendre des GPU
     int nbThreadsY = 8; 
@@ -164,12 +169,12 @@ int main(){
     time_t maintenant = time(NULL); // Obtenir l'heure actuelle
     struct tm *temps = localtime(&maintenant); // Convertir en structure tm
 
-    sprintf(nomFichier, "denoiser_%dRAYS_%dRB_%02d-%02d_%02dh%02d.ppm", nbRayonParPixel, nbRebondMax-1, temps->tm_mday, temps->tm_mon + 1, temps->tm_hour, temps->tm_min);
+    sprintf(nomFichier, "cam_rotation_%dRAYS_%dRB_%02d-%02d_%02dh%02d.ppm", nbRayonParPixel, nbRebondMax-1, temps->tm_mday, temps->tm_mon + 1, temps->tm_hour, temps->tm_min);
 
     FILE *fichier = fopen(nomFichier, "w");
 
     // camera
-    camera cam = init_camera(ratio);
+    camera cam = init_camera(origin, target, up, vfov, ratio);
 
     // tableau pour avoir chaque valeur de pixel au bon endroit (multithread et CUDA du coup)
     color* canva = (color*)malloc((largeur_image * hauteur_image)*sizeof(color));
@@ -235,6 +240,7 @@ int main(){
     cudaEventDestroy(start);
     cudaEventDestroy(stop);
 
+    // check les erreurs CUDA
     cudaError_t error = cudaGetLastError();
     if (error != cudaSuccess) {
         fprintf(stderr, "CUDA error: %s\n", cudaGetErrorString(error));

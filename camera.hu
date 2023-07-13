@@ -14,24 +14,26 @@ typedef struct {
     point3 coin_bas_gauche;
 } camera;
 
-__host__ __device__ camera init_camera(double ratio){
+__host__ __device__ double degrees_to_radians(double angle){
+    return angle * 3.1415926535897932385 / 180.0;
+}
+
+__host__ __device__ camera init_camera(point3 origin, point3 target, vec3 up, double vfov, double ratio){
 
     camera cam;
-    double hauteur_viewport = 1.0;
+    double theta = degrees_to_radians(vfov);
+    double h = tan(theta/2);
+    double hauteur_viewport = 2.0 * h;
     double largeur_viewport = ratio * hauteur_viewport;
-    double focal_length = 1.0;
-    vec3 focal_length_vec = {{0, 0, focal_length}};
 
-    point3 origin = {{0, 0, 0}};
+    vec3 w = vec3_normalize(sub(origin, target));
+    vec3 u = vec3_normalize(vec3_cross(up, w));
+    vec3 v = vec3_cross(w, u);
+
     cam.origin = origin;
-
-    vec3 horizontal ={{largeur_viewport, 0, 0}};
-    cam.horizontal = horizontal;
-
-    vec3 vertical = {{0, hauteur_viewport, 0}};
-    cam.vertical = vertical;
-
-    cam.coin_bas_gauche = sub(cam.origin, add(divide(cam.horizontal,2), add(divide(cam.vertical, 2), focal_length_vec)));
+    cam.horizontal = multiply_scalar(u, largeur_viewport);
+    cam.vertical = multiply_scalar(v, hauteur_viewport);
+    cam.coin_bas_gauche = sub(cam.origin, add(divide(cam.horizontal,2), add(divide(cam.vertical, 2), w)));
     //coin_bas_gauche = origin - horizontal/2 - vertical/2 - profondeur
 
     return cam;
