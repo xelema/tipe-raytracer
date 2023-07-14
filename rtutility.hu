@@ -55,6 +55,96 @@ __host__ __device__ color write_color_canva(color pixel_color, int nbRayonParPix
 //     }
 // }
 
+__host__ __device__ color rgb_to_hsl(color rgb) {
+    double r = rgb.e[0];
+    double g = rgb.e[1];
+    double b = rgb.e[2];
+
+    double max = (r > g) ? ((r > b) ? r : b) : ((g > b) ? g : b);
+    double min = (r < g) ? ((r < b) ? r : b) : ((g < b) ? g : b);
+    double h, s, l;
+
+    l = (max + min) / 2.0;
+
+    if (max == min) {
+        h = 0.0;
+        s = 0.0;
+    } else {
+        double d = max - min;
+        s = (l < 0.5) ? (d / (max + min)) : (d / (2.0 - max - min));
+
+        if (max == r) {
+            h = (g - b) / d + ((g < b) ? 6.0 : 0.0);
+        } else if (max == g) {
+            h = (b - r) / d + 2.0;
+        } else if (max == b) {
+            h = (r - g) / d + 4.0;
+        }
+
+        h /= 6.0;
+    }
+
+    color hsl;
+    hsl.e[0] = h;
+    hsl.e[1] = s;
+    hsl.e[2] = l;
+
+    return hsl;
+}
+
+__host__ __device__ double hue_to_rgb(double temp1, double temp2, double hue) {
+    if (hue < 0.0) {
+        hue += 1.0;
+    }
+    if (hue > 1.0) {
+        hue -= 1.0;
+    }
+
+    if (6.0 * hue < 1.0) {
+        return temp1 + (temp2 - temp1) * 6.0 * hue;
+    }
+    if (2.0 * hue < 1.0) {
+        return temp2;
+    }
+    if (3.0 * hue < 2.0) {
+        return temp1 + (temp2 - temp1) * ((2.0 / 3.0) - hue) * 6.0;
+    }
+
+    return temp1;
+}
+
+__host__ __device__ color hsl_to_rgb(color hsl) {
+    double h = hsl.e[0];
+    double s = hsl.e[1];
+    double l = hsl.e[2];
+
+    double r, g, b;
+
+    if (s == 0.0) {
+        r = l;
+        g = l;
+        b = l;
+    } else {
+        double temp2 = (l < 0.5) ? (l * (1.0 + s)) : (l + s - l * s);
+        double temp1 = 2.0 * l - temp2;
+
+        r = hue_to_rgb(temp1, temp2, h + 1.0 / 3.0);
+        g = hue_to_rgb(temp1, temp2, h);
+        b = hue_to_rgb(temp1, temp2, h - 1.0 / 3.0);
+    }
+
+    color rgb;
+    rgb.e[0] = r;
+    rgb.e[1] = g;
+    rgb.e[2] = b;
+
+    return rgb;
+}
+
+
+
+
+
 // nombre aléatoire entre 0 et 1 avec curand_uniform
 __device__ double randomDouble1(curandState* globalState, int ind) {
     curandState localState = globalState[ind];

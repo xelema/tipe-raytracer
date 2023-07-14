@@ -8,6 +8,9 @@ typedef struct Vec3{
 	double e[3];
 } vec3;
 
+typedef vec3 point3;
+typedef vec3 color;
+
 // vec3 vec3_init() {
 //     vec3 v;
 //     v.e[0] = 0;
@@ -136,11 +139,26 @@ __host__ __device__ vec3 vec3_normalize(vec3 v){
     return divide_scalar(v, vec3_length(v));
 }
 
+__host__ __device__ color color_clamp(vec3 v, double min, double max){
+    color res;
+
+    if (v.e[0]<min) res.e[0] = min;
+    if (v.e[0]>max) res.e[0] = max;
+    else res.e[0] = v.e[0];
+
+    if (v.e[1]<min) res.e[1] = min;
+    if (v.e[1]>max) res.e[1] = max;
+    else res.e[1] = v.e[1];
+
+    if (v.e[2]<min) res.e[2] = min;
+    if (v.e[2]>max) res.e[2] = max;
+    else res.e[2] = v.e[2];
+
+    return res;
+}
+
 // void print_vec3(vec3 v) {
 //     printf("%f %f %f", v.e[0], v.e[1], v.e[2]);
 // }
-
-typedef vec3 point3;
-typedef vec3 color;
 
 #endif

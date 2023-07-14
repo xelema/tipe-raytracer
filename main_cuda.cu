@@ -68,6 +68,18 @@ __host__ __device__ HitInfo closest_hit(ray r, sphere* spheres, int nbSpheres){
 
 __device__ color tracer(ray r, int nbRebondMax, curandState* globalState, int ind, sphere* spheres, int nbSpheres){
 
+    HitInfo hitInfo = closest_hit(r, spheres, nbSpheres); // cas des lumières
+    if (hitInfo.didHit){
+        if (hitInfo.mat.emissionStrength > 0){
+            color HSL = rgb_to_hsl(hitInfo.mat.emissionColor);
+            HSL.e[2] *= 1.20; // luminosité
+            HSL.e[1] *= 1.20; // saturation (valeurs subjectives)
+            color newCol = hsl_to_rgb(HSL);
+            return newCol;
+        }
+    }
+    else return BLACK;
+    
     color incomingLight = BLACK;
     color rayColor = WHITE;
 
@@ -125,12 +137,12 @@ int main(){
     int largeur_image = 1000;
     int hauteur_image = (int)(largeur_image / ratio);
 
-    double vfov = 110; // fov vertical en degrée
-    point3 origin = {{-0.9, 0.9, -3.8}}; // position de la camera
-    point3 target = {{0.2, 0, -2.8}}; // cible de la camera
-    vec3 up = {{0, 1, 0.2}}; // permet de modifier la rotation selon l'axe z (garder comme ça pour horizontal)
+    double vfov = 60; // fov vertical en degrée
+    point3 origin = {{0, 0, 0}}; // position de la camera
+    point3 target = {{0, 0, -3}}; // cible de la camera
+    vec3 up = {{0, 1, 0}}; // permet de modifier la rotation selon l'axe z (garder comme ça pour horizontal)
 
-    int nbRayonParPixel = 15000;
+    int nbRayonParPixel = 2000;
     int nbRebondMax = 4;
     
     int nbThreadsX = 8; // peut dépendre des GPU
