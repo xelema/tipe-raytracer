@@ -5,20 +5,29 @@ Implémentation d'un Ray Tracer pour mon exposé de TIPE.
 - Les paramètres de rendu se trouvent dans la fonction main de `main_cuda.cu` :
 
 ```C
+    //format du fichier
     double ratio = 4.0 / 3.0;
     int largeur_image = 1000;
     int hauteur_image = (int)(largeur_image / ratio);
 
-    int nbRayonParPixel = 101;
-    int nbRebondMax = 6;
+    //position de la camera
+    double vfov = 110; // fov vertical en degrée
+    point3 origin = {{-0.9, 0.9, -3.8}}; // position de la camera
+    point3 target = {{0.2, 0, -2.8}}; // cible de la camera
+    vec3 up = {{0, 1, 0}}; // permet de modifier la rotation selon l'axe z ({{0, 1, 0}} pour horizontal)
+
+    //qualité et performance
+    int nbRayonParPixel = 2000;
+    int nbRebondMax = 5;
     
     int nbThreadsX = 8; // peut dépendre des GPU
     int nbThreadsY = 8; 
 
     bool useDenoiser = true; // utilise ou non le denoiser
 
+    //position des sphères dans la scène
     sphere h_sphere_list[10] = {
-        // {position du centre (x,y,z)}, rayon, {couleur de l'objet, couleur d'emission, force d'emission}
+        //{position du centre x, y, z}, rayon, {couleur de l'objet, couleur d'emission, force d'emission}
         {{{-501,0,0}}, 500, {GREEN, BLACK, 0.0}},                 
         {{{0,-501,0}}, 500, {WHITE, BLACK, 0.0}},                 
         {{{501, 0, 0}}, 500, {RED, BLACK, 0.0}},                  
