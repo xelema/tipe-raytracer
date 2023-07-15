@@ -68,7 +68,32 @@ __host__ __device__ HitInfo closest_hit(ray r, sphere* spheres, int nbSpheres){
     return closestHit;
 }
 
-__device__ color tracer(ray r, int nbRebondMax, curandState* globalState, int ind, sphere* spheres, int nbSpheres){
+__device__ color ambient_occlusion(vec3 point, vec3 normal, sphere* spheres, int nbSpheres, curandState* globalState, int ind, double AO_intensity) {
+    const int nbSamples = 1; // pour l'instant 1 suffit, à voir pour d'autres scènes
+
+    color occlusion = BLACK;
+
+    for (int i = 0; i < nbSamples; ++i) {
+        vec3 randomDir = random_dir_no_norm(globalState, ind);
+        vec3 hemisphereDir = add(normal, randomDir);
+        ray occlusionRay = {point, vec3_normalize(hemisphereDir)};
+
+        HitInfo occlusionHit = closest_hit(occlusionRay, spheres, nbSpheres);
+
+        if (occlusionHit.didHit) {
+            double distance = vec3_length(sub(occlusionHit.hitPoint, point));
+            double attenuation = distance / occlusionHit.dst;
+            attenuation = pow(attenuation, AO_intensity);
+
+            occlusion = add(occlusion, {{attenuation, attenuation, attenuation}});
+        }
+    }
+
+    return divide_scalar(divide_scalar(occlusion, nbSamples), AO_intensity);
+}
+
+
+__device__ color tracer(ray r, int nbRebondMax, curandState* globalState, int ind, sphere* spheres, int nbSpheres, double AO_intensity, bool useAO){
 
     // cas des lumières
     HitInfo hitInfo = closest_hit(r, spheres, nbSpheres); 
@@ -92,14 +117,30 @@ __device__ color tracer(ray r, int nbRebondMax, curandState* globalState, int in
         HitInfo hitInfo = closest_hit(r, spheres, nbSpheres);
 
         if (hitInfo.didHit){
-            r.origin = hitInfo.hitPoint;
-            r.dir = vec3_normalize(add(hitInfo.normal,random_dir_no_norm(globalState, ind))); // sebastian lague
+            if (useAO){ // calcul avec occlusion ambiante (notamment augmentation des lumières)
+                r.origin = hitInfo.hitPoint;
+                r.dir = vec3_normalize(add(hitInfo.normal,random_dir_no_norm(globalState, ind))); // sebastian lague
 
-            material mat = hitInfo.mat;
-            color emittedLight = multiply_scalar(mat.emissionColor, mat.emissionStrength);
+                material mat = hitInfo.mat;
+                color emittedLight = multiply_scalar(mat.emissionColor, mat.emissionStrength * AO_intensity);
 
-            incomingLight = add(incomingLight,multiply(emittedLight, rayColor));
-            rayColor = multiply(mat.diffuseColor, rayColor);
+                incomingLight = add(incomingLight,multiply(emittedLight, rayColor));
+                rayColor = multiply(mat.diffuseColor, rayColor);
+
+                color occlusion = ambient_occlusion(hitInfo.hitPoint, hitInfo.normal, spheres, nbSpheres, globalState, ind, AO_intensity);
+                rayColor = multiply(rayColor, occlusion); // applique l'occlusion ambiante à la couleur du rayon
+            }
+
+            else{  // calcul sans occlusion ambiante
+                r.origin = hitInfo.hitPoint;
+                r.dir = vec3_normalize(add(hitInfo.normal,random_dir_no_norm(globalState, ind))); // sebastian lague
+
+                material mat = hitInfo.mat;
+                color emittedLight = multiply_scalar(mat.emissionColor, mat.emissionStrength);
+
+                incomingLight = add(incomingLight,multiply(emittedLight, rayColor));
+                rayColor = multiply(mat.diffuseColor, rayColor);
+            }
         }
         else{
             break;
@@ -108,7 +149,7 @@ __device__ color tracer(ray r, int nbRebondMax, curandState* globalState, int in
     return incomingLight;
 }
 
-__global__ void render_canva(color* canva, int largeur_image, int hauteur_image, int nbRayonParPixel, int nbRebondMax, camera cam, curandState* states, sphere* spheres, int nbSpheres) {
+__global__ void render_canva(color* canva, int largeur_image, int hauteur_image, int nbRayonParPixel, int nbRebondMax, camera cam, curandState* states, sphere* spheres, int nbSpheres, double AO_intensity, bool useAO) {
     
     int i = blockIdx.x * blockDim.x + threadIdx.x;
     int j = blockIdx.y * blockDim.y + threadIdx.y;
@@ -124,7 +165,7 @@ __global__ void render_canva(color* canva, int largeur_image, int hauteur_image,
             double v = ((double)j + randomDouble(states, ind, -0.5, 0.5))/(hauteur_image-1);
 
             ray r = get_ray(u, v, cam);
-            totalLight = add(totalLight, tracer(r, nbRebondMax, states, ind, spheres, nbSpheres));
+            totalLight = add(totalLight, tracer(r, nbRebondMax, states, ind, spheres, nbSpheres, AO_intensity, useAO));
         }
 
         canva[pixel_index] = write_color_canva(totalLight, nbRayonParPixel);
@@ -149,7 +190,7 @@ int main(){
     vec3 up = {{0, 1, 0.2}}; // permet de modifier la rotation selon l'axe z ({{0, 1, 0}} pour horizontal)
 
     //qualité et performance
-    int nbRayonParPixel = 2000;
+    int nbRayonParPixel = 10000;
     int nbRebondMax = 5;
     
     int nbThreadsX = 8; // peut dépendre des GPU
@@ -157,14 +198,17 @@ int main(){
 
     bool useDenoiser = true;
 
+    bool useAO = false; // occlusion ambiante, rendu environ 2x plus lent
+    double AO_intensity = 5.0; // supérieur à 1 pour augmenter l'intensité
+
     //position des sphères dans la scène
     sphere h_sphere_list[10] = {
         //{position du centre x, y, z}, rayon, {couleur de l'objet, couleur d'emission, force d'emission}
         {{{-501,0,0}}, 500, {GREEN, BLACK, 0.0}},                 
         {{{0,-501,0}}, 500, {WHITE, BLACK, 0.0}},                 
         {{{501, 0, 0}}, 500, {RED, BLACK, 0.0}},                  
-        {{{-0.5, 1.4, -3}}, 0.5, {BLACK, {{1.0, 0.6, 0.2}}, 3.0}},   
-        {{{0.5, 1.4, -3}}, 0.5, {BLACK, {{0.7, 0.2, 1.0}}, 3.0}},   
+        {{{-0.5, 1.4, -3}}, 0.5, {BLACK, {{1.0, 0.6, 0.2}}, 4}},   
+        {{{0.5, 1.4, -3}}, 0.5, {BLACK, {{0.7, 0.2, 1.0}}, 4}},   
         {{{-0.5, -1.4, -3}}, 0.5, {BLACK, {{0.55, 0.863, 1.0}}, 2.5}},   
         {{{0.5, -1.4, -3}}, 0.5, {BLACK, {{0.431, 1.0, 0.596}}, 2.5}},   
         {{{0, 0, -504}}, 500, {WHITE, BLACK, 0.0}},               
@@ -190,7 +234,7 @@ int main(){
     time_t maintenant = time(NULL); // Obtenir l'heure actuelle
     struct tm *temps = localtime(&maintenant); // Convertir en structure tm
 
-    sprintf(nomFichier, "DEBUG_%dRAYS_%dRB_%02d-%02d_%02dh%02d.ppm", nbRayonParPixel, nbRebondMax-1, temps->tm_mday, temps->tm_mon + 1, temps->tm_hour, temps->tm_min);
+    sprintf(nomFichier, "AO_%dRAYS_%dRB_%02d-%02d_%02dh%02d.ppm", nbRayonParPixel, nbRebondMax-1, temps->tm_mday, temps->tm_mon + 1, temps->tm_hour, temps->tm_min);
 
     FILE *fichier = fopen(nomFichier, "w");
 
@@ -224,7 +268,7 @@ int main(){
     init_curand_state<<<blocks, threads>>>(states, largeur_image, hauteur_image);
 
     // lance le rendu de canva
-    render_canva<<<blocks, threads>>>(canva_device, largeur_image, hauteur_image, nbRayonParPixel, nbRebondMax, cam, states, d_sphere_list, nbSpheres);
+    render_canva<<<blocks, threads>>>(canva_device, largeur_image, hauteur_image, nbRayonParPixel, nbRebondMax, cam, states, d_sphere_list, nbSpheres, AO_intensity, useAO);
 
     // copie canva du device (gpu) vers l'host (cpu), puis free la mémoire de canva sur device
     cudaMemcpy(canva, canva_device, (largeur_image * hauteur_image)*sizeof(color), cudaMemcpyDeviceToHost);
