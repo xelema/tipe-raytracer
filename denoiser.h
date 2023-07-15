@@ -1,16 +1,21 @@
 #ifndef DENOISER_H
 #define DENOISER_H
 
-#include "vec3.hu"
-#include "ray.hu"
-#include "hitinfo.hu"
-#include "sphere.hu"
-#include "rtutility.hu"
-#include "camera.hu"
+#include <stdio.h>
+#include <stdbool.h>
+#include <stdlib.h>
+#include <OpenImageDenoise/oidn.h>
 
-__host__ __device__ HitInfo closest_hit(ray r, sphere* spheres, int nbSpheres);
+#include "vec3.h"
+#include "ray.h"
+#include "hitinfo.h"
+#include "sphere.h"
+#include "rtutility.h"
+#include "camera.h"
 
-__host__ __device__ void render_normal_albedo(vec3* normal, color* albedo, int hauteur_image, int largeur_image, camera cam, sphere* spheres, int nbSpheres){
+HitInfo closest_hit(ray r, sphere* spheres, int nbSpheres);
+
+void render_normal_albedo(vec3* normal, color* albedo, int hauteur_image, int largeur_image, camera cam, sphere* spheres, int nbSpheres){
     for (int j = hauteur_image - 1; j >= 0; j--){
         for (int i = 0; i < largeur_image; i++){
             int pixel_index = j*largeur_image+i;
@@ -36,25 +41,25 @@ __host__ __device__ void render_normal_albedo(vec3* normal, color* albedo, int h
                 }
             }
             else{
-                normal[pixel_index] = BLACK;
-                albedo[pixel_index] = BLACK;
+                normal[pixel_index] = (color)BLACK;
+                albedo[pixel_index] = (color)BLACK;
             }
         }
     }
 }
 
-__host__ void denoiser(int largeur_image, int hauteur_image, color* canva, camera cam, sphere* spheres, int nbSpheres){
+void denoiser(int largeur_image, int hauteur_image, color* canva, camera cam, sphere* spheres, int nbSpheres){
 
     // tableau pour avoir chaque valeur de pixel au bon endroit, avant rebond de lumière (necessaire au denoise)
     color* albedo = (color*)malloc((largeur_image * hauteur_image)*sizeof(color));
     for (int i = 0; i < largeur_image*hauteur_image; i++) {
-        albedo[i] = BLACK;
+        albedo[i] = (color)BLACK;
     }
 
     // tableau pour avoir la normale de chaque objet (necessaire au denoise)
     color* normal = (color*)malloc((largeur_image * hauteur_image)*sizeof(color));
     for (int i = 0; i < largeur_image*hauteur_image; i++) {
-        normal[i] = BLACK;
+        normal[i] = (color)BLACK;
     }
 
     render_normal_albedo(normal, albedo, hauteur_image, largeur_image, cam, spheres, nbSpheres);

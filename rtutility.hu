@@ -164,7 +164,7 @@ __global__ void init_curand_state(curandState* states, int width, int height) {
 
     // chaque thread a le meme seed
     if (i < width && j < height)
-        curand_init(6969, ind, 0, &states[ind]);
+        curand_init(1010, ind, 0, &states[ind]);
 }
 
 // direction aléatoire
