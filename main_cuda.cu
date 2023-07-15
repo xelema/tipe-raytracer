@@ -28,21 +28,23 @@ __host__ __device__ HitInfo hit_sphere(point3 center, double radius, ray r){
     
     double discriminant = b*b - 4*a*c;
 
-    if (discriminant >= 0){
-        double t1 = (-b -sqrt(discriminant))/(2*a);
-        double t2 = (-b +sqrt(discriminant))/(2*a);
-        
+    if (discriminant > 0){
+        double t1 = (-b - sqrt(discriminant))/(2*a);
         if (t1 >= 0){
             hitInfo.didHit = true;
             hitInfo.dst = t1;
             hitInfo.hitPoint = ray_at(r, t1);
             hitInfo.normal = vec3_normalize(sub(ray_at(r, t1), center));
+            return hitInfo;
         }
-        else if (t2 >= 0){
+
+        double t2 = (-b + sqrt(discriminant))/(2*a);
+        if (t2 >= 0.001){
             hitInfo.didHit = true;
             hitInfo.dst = t2;
             hitInfo.hitPoint = ray_at(r, t2);
             hitInfo.normal = vec3_normalize(sub(ray_at(r, t2), center));
+            return hitInfo;
         }
     }
     return hitInfo;
@@ -68,7 +70,8 @@ __host__ __device__ HitInfo closest_hit(ray r, sphere* spheres, int nbSpheres){
 
 __device__ color tracer(ray r, int nbRebondMax, curandState* globalState, int ind, sphere* spheres, int nbSpheres){
 
-    HitInfo hitInfo = closest_hit(r, spheres, nbSpheres); // cas des lumières
+    // cas des lumières
+    HitInfo hitInfo = closest_hit(r, spheres, nbSpheres); 
     if (hitInfo.didHit){
         if (hitInfo.mat.emissionStrength > 0){
             color HSL = rgb_to_hsl(hitInfo.mat.emissionColor);
@@ -80,6 +83,7 @@ __device__ color tracer(ray r, int nbRebondMax, curandState* globalState, int in
     }
     else return BLACK;
     
+    // pas une lumière
     color incomingLight = BLACK;
     color rayColor = WHITE;
 
@@ -151,7 +155,7 @@ int main(){
     int nbThreadsX = 8; // peut dépendre des GPU
     int nbThreadsY = 8; 
 
-    bool useDenoiser = false;
+    bool useDenoiser = true;
 
     //position des sphères dans la scène
     sphere h_sphere_list[10] = {
@@ -159,10 +163,10 @@ int main(){
         {{{-501,0,0}}, 500, {GREEN, BLACK, 0.0}},                 
         {{{0,-501,0}}, 500, {WHITE, BLACK, 0.0}},                 
         {{{501, 0, 0}}, 500, {RED, BLACK, 0.0}},                  
-        {{{-0.5, 1.4, -3}}, 0.5, {BLACK, {{1.0, 0.6, 0.2}}, 8.0}},   
-        {{{0.5, 1.4, -3}}, 0.5, {BLACK, {{0.7, 0.2, 1.0}}, 8.0}},   
-        {{{-0.5, -1.4, -3}}, 0.5, {BLACK, {{0.55, 0.863, 1.0}}, 5.0}},   
-        {{{0.5, -1.4, -3}}, 0.5, {BLACK, {{0.431, 1.0, 0.596}}, 5.0}},   
+        {{{-0.5, 1.4, -3}}, 0.5, {BLACK, {{1.0, 0.6, 0.2}}, 3.0}},   
+        {{{0.5, 1.4, -3}}, 0.5, {BLACK, {{0.7, 0.2, 1.0}}, 3.0}},   
+        {{{-0.5, -1.4, -3}}, 0.5, {BLACK, {{0.55, 0.863, 1.0}}, 2.5}},   
+        {{{0.5, -1.4, -3}}, 0.5, {BLACK, {{0.431, 1.0, 0.596}}, 2.5}},   
         {{{0, 0, -504}}, 500, {WHITE, BLACK, 0.0}},               
         {{{0, 501, 0}}, 500, {WHITE, BLACK, 0.0}},                
         {{{0, 0, -3}}, 0.5, {SKY, BLACK, 0.0}}                    
@@ -186,7 +190,7 @@ int main(){
     time_t maintenant = time(NULL); // Obtenir l'heure actuelle
     struct tm *temps = localtime(&maintenant); // Convertir en structure tm
 
-    sprintf(nomFichier, "cam_rotation_%dRAYS_%dRB_%02d-%02d_%02dh%02d.ppm", nbRayonParPixel, nbRebondMax-1, temps->tm_mday, temps->tm_mon + 1, temps->tm_hour, temps->tm_min);
+    sprintf(nomFichier, "DEBUG_%dRAYS_%dRB_%02d-%02d_%02dh%02d.ppm", nbRayonParPixel, nbRebondMax-1, temps->tm_mday, temps->tm_mon + 1, temps->tm_hour, temps->tm_min);
 
     FILE *fichier = fopen(nomFichier, "w");
 
