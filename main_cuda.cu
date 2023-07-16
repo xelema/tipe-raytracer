@@ -117,11 +117,15 @@ __device__ color tracer(ray r, int nbRebondMax, curandState* globalState, int in
         HitInfo hitInfo = closest_hit(r, spheres, nbSpheres);
 
         if (hitInfo.didHit){
-            if (useAO){ // calcul avec occlusion ambiante (notamment augmentation des lumières)
-                r.origin = hitInfo.hitPoint;
-                r.dir = vec3_normalize(add(hitInfo.normal,random_dir_no_norm(globalState, ind))); // sebastian lague
+            material mat = hitInfo.mat;
 
-                material mat = hitInfo.mat;
+            r.origin = hitInfo.hitPoint;
+            vec3 diffuse_dir = vec3_normalize(add(hitInfo.normal,random_dir_no_norm(globalState, ind))); // sebastian lague
+            vec3 reflected_dir = sub(r.dir, multiply_scalar(hitInfo.normal, 2*vec3_dot(r.dir, hitInfo.normal)));
+            r.dir = vec3_lerp(diffuse_dir, reflected_dir, mat.reflectionStrength);
+
+            if (useAO){ // calcul avec occlusion ambiante (notamment augmentation des lumières)
+
                 color emittedLight = multiply_scalar(mat.emissionColor, mat.emissionStrength * AO_intensity);
 
                 incomingLight = add(incomingLight,multiply(emittedLight, rayColor));
@@ -132,10 +136,7 @@ __device__ color tracer(ray r, int nbRebondMax, curandState* globalState, int in
             }
 
             else{  // calcul sans occlusion ambiante
-                r.origin = hitInfo.hitPoint;
-                r.dir = vec3_normalize(add(hitInfo.normal,random_dir_no_norm(globalState, ind))); // sebastian lague
 
-                material mat = hitInfo.mat;
                 color emittedLight = multiply_scalar(mat.emissionColor, mat.emissionStrength);
 
                 incomingLight = add(incomingLight,multiply(emittedLight, rayColor));
@@ -184,13 +185,13 @@ int main(){
     int hauteur_image = (int)(largeur_image / ratio);
 
     //position de la camera
-    double vfov = 110; // fov vertical en degrée
-    point3 origin = {{-0.9, 0.9, -3.8}}; // position de la camera
-    point3 target = {{0.2, 0, -2.8}}; // cible de la camera
-    vec3 up = {{0, 1, 0.2}}; // permet de modifier la rotation selon l'axe z ({{0, 1, 0}} pour horizontal)
+    double vfov = 70; // fov vertical en degrée
+    point3 origin = {{-0.7, 0, 0}}; // position de la camera
+    point3 target = {{0.3, -0.5, -3}}; // cible de la camera
+    vec3 up = {{0, 1, 0}}; // permet de modifier la rotation selon l'axe z ({{0, 1, 0}} pour horizontal)
 
     //qualité et performance
-    int nbRayonParPixel = 10000;
+    int nbRayonParPixel = 2000;
     int nbRebondMax = 5;
     
     int nbThreadsX = 8; // peut dépendre des GPU
@@ -198,28 +199,36 @@ int main(){
 
     bool useDenoiser = true;
 
-    bool useAO = false; // occlusion ambiante, rendu environ 2x plus lent
-    double AO_intensity = 5.0; // supérieur à 1 pour augmenter l'intensité
+    bool useAO = true; // occlusion ambiante, rendu environ 2x plus lent
+    double AO_intensity = 3.0; // supérieur à 1 pour augmenter l'intensité
 
     //position des sphères dans la scène
-    sphere h_sphere_list[10] = {
-        //{position du centre x, y, z}, rayon, {couleur de l'objet, couleur d'emission, force d'emission}
-        {{{-501,0,0}}, 500, {GREEN, BLACK, 0.0}},                 
-        {{{0,-501,0}}, 500, {WHITE, BLACK, 0.0}},                 
-        {{{501, 0, 0}}, 500, {RED, BLACK, 0.0}},                  
-        {{{-0.5, 1.4, -3}}, 0.5, {BLACK, {{1.0, 0.6, 0.2}}, 4}},   
-        {{{0.5, 1.4, -3}}, 0.5, {BLACK, {{0.7, 0.2, 1.0}}, 4}},   
-        {{{-0.5, -1.4, -3}}, 0.5, {BLACK, {{0.55, 0.863, 1.0}}, 2.5}},   
-        {{{0.5, -1.4, -3}}, 0.5, {BLACK, {{0.431, 1.0, 0.596}}, 2.5}},   
-        {{{0, 0, -504}}, 500, {WHITE, BLACK, 0.0}},               
-        {{{0, 501, 0}}, 500, {WHITE, BLACK, 0.0}},                
-        {{{0, 0, -3}}, 0.5, {SKY, BLACK, 0.0}}                    
+    sphere h_sphere_list[11] = {
+        //{position du centre x, y, z}, rayon, {couleur de l'objet, couleur d'emission, intensité d'emission (> 1), intensité de reflection (entre 0 et 1)}
+        {{{-501,0,0}}, 500, {GREEN, BLACK, 0.0, 0.96}},
+        {{{0,-501,0}}, 500, {WHITE, BLACK, 0.0, 0.4}},
+        {{{501, 0, 0}}, 500, {RED, BLACK, 0.0, 0.96}},
+        {{{-0.5, 1.4, -3}}, 0.5, {BLACK, {{1.0, 0.6, 0.2}}, 4.0, 0.0}},
+        {{{0.5, 1.4, -2.2}}, 0.5, {BLACK, {{0.7, 0.2, 1.0}}, 4.0, 0.0}},
+        {{{-0.5, -1.4, -1.5}}, 0.5, {BLACK, {{0.55, 0.863, 1.0}}, 2.5, 0.0}},
+        {{{0.5, -1.4, -3.1}}, 0.5, {BLACK, {{0.431, 1.0, 0.596}}, 2.5, 0.0}},
+        {{{0, 0, -504}}, 500, {WHITE, BLACK, 0.0, 0.0}},
+        {{{0, 501, 0}}, 500, {WHITE, BLACK, 0.0, 0.0}},
+        {{{-0.4, -0.5, -3.3}}, 0.5, {SKY, BLACK, 0.0, 1.0}},
+        {{{0.2, -0.7, -2}}, 0.3, {SKY, BLACK, 0.0, 0.5}},
     };
+    // nom du fichier
+    char nomFichier[100];
+    time_t maintenant = time(NULL); // Obtenir l'heure actuelle
+    struct tm *temps = localtime(&maintenant); // Convertir en structure tm
+
+    sprintf(nomFichier, "REFLECTION_%dRAYS_%dRB_%02d-%02d_%02dh%02d.ppm", nbRayonParPixel, nbRebondMax-1, temps->tm_mday, temps->tm_mon + 1, temps->tm_hour, temps->tm_min);
 
     ////////////////////////////////////////////////////////
     ////////////////////////////////////////////////////////
 
     int nbSpheres = sizeof(h_sphere_list) / sizeof(h_sphere_list[0]);
+    FILE *fichier = fopen(nomFichier, "w");
 
     // temps d'execution
     cudaEvent_t start, stop;
@@ -228,15 +237,6 @@ int main(){
     cudaEventCreate(&start);
     cudaEventCreate(&stop);
     cudaEventRecord(start, 0);
-
-    // nom du fichier
-    char nomFichier[100];
-    time_t maintenant = time(NULL); // Obtenir l'heure actuelle
-    struct tm *temps = localtime(&maintenant); // Convertir en structure tm
-
-    sprintf(nomFichier, "AO_%dRAYS_%dRB_%02d-%02d_%02dh%02d.ppm", nbRayonParPixel, nbRebondMax-1, temps->tm_mday, temps->tm_mon + 1, temps->tm_hour, temps->tm_min);
-
-    FILE *fichier = fopen(nomFichier, "w");
 
     // camera
     camera cam = init_camera(origin, target, up, vfov, ratio);

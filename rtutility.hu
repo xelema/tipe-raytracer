@@ -26,6 +26,12 @@ __host__ __device__ double clamp(double x, double min, double max){
     return x;
 }
 
+__host__ __device__ vec3 vec3_lerp(vec3 x, vec3 y, double t){
+    vec3 res;
+    res = add(x, multiply_scalar(sub(y, x), t));
+    return res;
+}
+
 __host__ __device__ color write_color_canva(color pixel_color, int nbRayonParPixel){
     
     double r = pixel_color.e[0];
