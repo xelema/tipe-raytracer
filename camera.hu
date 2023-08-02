@@ -1,7 +1,6 @@
 #ifndef CAMERA_H
 #define CAMERA_H
 
-
 #include "rtutility.hu"
 #include "vec3.hu"
 
@@ -39,10 +38,17 @@ __host__ __device__ camera init_camera(point3 origin, point3 target, vec3 up, do
     return cam;
 }
 
-__host__ __device__ ray get_ray(double u, double v, camera cam){
+__host__ __device__ ray get_ray(double u, double v, camera cam, double focus_distance, double dx_ouverture, double dy_ouverture){
     ray res;
-    res.origin = cam.origin;
-    res.dir = add(cam.coin_bas_gauche, add(multiply_scalar(cam.horizontal, u), sub(multiply_scalar(cam.vertical, v), cam.origin)));
+
+    vec3 direction = add(cam.coin_bas_gauche, add(multiply_scalar(cam.horizontal, u), sub(multiply_scalar(cam.vertical, v), cam.origin)));
+
+    vec3 destination = add(cam.origin, multiply_scalar(direction, focus_distance));
+    point3 new_origin = add(cam.origin, {{dx_ouverture, dy_ouverture, 0}});
+
+    res.origin = new_origin;
+    res.dir = vec3_normalize(sub(destination, new_origin));
+
     return res;
 }
 

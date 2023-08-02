@@ -10,6 +10,8 @@
 
 // constantes
 
+#define M_PI 3.1415926535897932385
+
 #define RED {{1, 0, 0}}
 #define GREEN {{0, 1, 0}}
 #define BLUE {{0, 0, 1}}
