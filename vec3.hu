@@ -51,9 +51,9 @@ __host__ __device__ vec3 vec3_negate(vec3 v) {
 //     return v.e[i];
 // }
 
-// double vec3_length_squared(vec3 v) {
-//     return v.e[0]*v.e[0] + v.e[1]*v.e[1] + v.e[2]*v.e[2];
-// }
+__host__ __device__  double vec3_length_squared(vec3 v) {
+    return v.e[0]*v.e[0] + v.e[1]*v.e[1] + v.e[2]*v.e[2];
+}
 
 __host__ __device__ vec3 add(vec3 v1, vec3 v2){
     vec3 result;
@@ -103,8 +103,12 @@ __host__ __device__ vec3 multiply_scalar(vec3 v, double t){
     return result;
 }
 
-__host__ __device__ vec3 divide(vec3 v, double t) {
-    return multiply_scalar(v, 1/t);
+__host__ __device__ vec3 divide(vec3 u, vec3 v) {
+    vec3 result;
+    result.e[0] = u.e[0] / v.e[0];
+    result.e[1] = u.e[1] / v.e[1];
+    result.e[2] = u.e[2] / v.e[2];
+    return result;
 }
 
 __host__ __device__ vec3 divide_scalar(vec3 v, double t) {

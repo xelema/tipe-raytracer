@@ -8,8 +8,6 @@
 #include "rtutility.hu"
 #include "camera.hu"
 
-__host__ __device__ HitInfo closest_hit(ray r, sphere* spheres, int nbSpheres);
-
 typedef struct Col_Alb_Norm{
 	vec3 e[3];
 } col_alb_norm;
@@ -22,7 +20,7 @@ __host__ __device__ col_alb_norm add_col_alb_norm(col_alb_norm v1, col_alb_norm 
     return result;
 }
 
-__host__ void denoiser(int largeur_image, int hauteur_image, color* canva, camera cam, sphere* spheres, int nbSpheres, color* albedo, color* normal){
+__host__ void denoiser(int largeur_image, int hauteur_image, color* canva, camera cam, color* albedo, color* normal){
 
     // initialise le device OIDN
     OIDNDevice device = oidnNewDevice(OIDN_DEVICE_TYPE_DEFAULT);

@@ -32,7 +32,7 @@ __host__ __device__ camera init_camera(point3 origin, point3 target, vec3 up, do
     cam.origin = origin;
     cam.horizontal = multiply_scalar(u, largeur_viewport);
     cam.vertical = multiply_scalar(v, hauteur_viewport);
-    cam.coin_bas_gauche = sub(cam.origin, add(divide(cam.horizontal,2), add(divide(cam.vertical, 2), w)));
+    cam.coin_bas_gauche = sub(cam.origin, add(divide_scalar(cam.horizontal,2), add(divide_scalar(cam.vertical, 2), w)));
     //coin_bas_gauche = origin - horizontal/2 - vertical/2 - profondeur
 
     return cam;

@@ -1,0 +1,87 @@
+#ifndef TRIANGLE_H
+#define TRIANGLE_H
+
+#include "vec3.hu"
+#include "hitinfo.hu"
+
+typedef struct Triangle{
+    point3 A;
+    point3 B;
+    point3 C;
+    material mat;
+} triangle;
+
+// __host__ __device__ HitInfo hit_triangle(triangle tri, ray r){
+// // https://youtu.be/Fr328siHuVc pour explications
+
+//     HitInfo hitInfo;
+//     hitInfo.didHit=false; 
+
+//     vec3 normal = vec3_normalize(vec3_cross(sub(tri.B, tri.A), sub(tri.C, tri.A)));
+//     double t = vec3_dot(sub(tri.C, r.origin), normal) / vec3_dot(r.dir, normal);
+
+//     if (t >= 0.000001){
+//         hitInfo.hitPoint = add(r.origin, multiply_scalar(r.dir, hitInfo.dst));
+
+//         vec3 u = sub(tri.B, tri.A);
+//         vec3 v = sub(tri.C, tri.A);
+//         vec3 w = sub(hitInfo.hitPoint, tri.A);
+
+//         double m11 = vec3_length_squared(u);
+//         double m12 = vec3_dot(u, v);
+//         double m22 = vec3_length_squared(v);
+//         double detm = m11*m22 - m12*m12;
+
+//         double b11 = vec3_dot(w, u);
+//         double b21 = vec3_dot(w, v);
+//         double detb = b11*m22 - b21*m12;
+
+//         double beta = detb / detm; // coordonnée barycentrique par rapport à B
+        
+//         double g12 = b11;
+//         double g22 = b21;
+//         double detg = m11*g22 - m12*g12;
+
+//         double gamma = detg / detm; // coordonnée barycentrique par rapport à C
+
+//         double alpha = 1 - beta - gamma; // coordonnée barycentrique par rapport à A
+
+//         if (alpha < 0 || alpha > 1) return hitInfo;
+//         if (beta < 0 || beta > 1) return hitInfo;
+//         if (gamma < 0 || gamma > 1) return hitInfo;
+
+//         hitInfo.didHit = true;
+//         hitInfo.normal = normal;
+//         hitInfo.dst = t;
+//     }
+//     return hitInfo;
+// }
+
+__host__ __device__ HitInfo hit_triangle(triangle tri, ray r){
+
+    point3 edgeAB = sub(tri.B, tri.A);
+    point3 edgeAC = sub(tri.C, tri.A);
+    vec3 normalVect = vec3_cross(edgeAB, edgeAC);
+
+    vec3 ao = sub(r.origin, tri.A);  
+    vec3 dao = vec3_cross(ao, r.dir);
+
+    double det = -vec3_dot(r.dir, normalVect);
+    double invDet = 1/det;
+
+    double dst = vec3_dot(ao, normalVect) * invDet;
+    double u = vec3_dot(edgeAC, dao) * invDet;
+    double v = -vec3_dot(edgeAB, dao) * invDet;
+    double w = 1 - u - v;
+
+    HitInfo hitInfo;
+    hitInfo.didHit = det >= 1E-6 && dst >= 0.00001 && u >= 0.00001 && v >= 0.00001 && w >= 0.00001;
+    hitInfo.hitPoint = add(r.origin, multiply_scalar(r.dir, dst));
+    hitInfo.normal = vec3_normalize(normalVect);
+    hitInfo.dst = dst;
+
+    return hitInfo;
+
+}
+
+#endif
