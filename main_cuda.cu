@@ -4,7 +4,12 @@
 #include <stdlib.h>
 #include <time.h>
 #include <cuda_runtime.h>
+
 #include <OpenImageDenoise/oidn.h>
+#include <assimp/cimport.h>
+#include <assimp/scene.h>
+#include <assimp/postprocess.h>
+#include <assimp/color4.h>
 
 #include "vec3.hu"
 #include "ray.hu"
@@ -181,7 +186,7 @@ int main(){
     double ouverture_y = 0.;
 
     //qualité et performance
-    int nbRayonParPixel = 100;
+    int nbRayonParPixel = 10;
     int nbRebondMax = 5;
     
     int nbThreadsX = 8; // peut dépendre des GPU
@@ -190,42 +195,109 @@ int main(){
     bool useDenoiser = false;
 
     bool useAO = false; // occlusion ambiante, rendu environ 2x plus lent
-    double AO_intensity = 2.5; // supérieur à 1 pour augmenter l'intensité
+    double AO_intensity = 3; // supérieur à 1 pour augmenter l'intensité
 
     //position des sphères dans la scène
-    sphere h_sphere_list[11] = {
+    sphere h_sphere_list[10] = {
         //{position du centre x, y, z}, rayon, {couleur de l'objet, couleur d'emission, intensité d'emission (> 1), intensité de reflection (entre 0 et 1)}
         {{{-501,0,0}}, 500, {GREEN, BLACK, 0.0, 0.96}},
         {{{0,-501,0}}, 500, {WHITE, BLACK, 0.0, 0.4}},
         {{{501, 0, 0}}, 500, {RED, BLACK, 0.0, 0.96}},
-        {{{-0.5, 1.4, -3}}, 0.5, {BLACK, {{1.0, 0.6, 0.2}}, 4.0, 0.0}},
-        {{{0.5, 1.4, -2.2}}, 0.5, {BLACK, {{0.7, 0.2, 1.0}}, 4.0, 0.0}},
-        {{{-0.5, -1.4, -1.5}}, 0.5, {BLACK, {{0.55, 0.863, 1.0}}, 2.5, 0.0}},
-        {{{0.5, -1.4, -3.1}}, 0.5, {BLACK, {{0.431, 1.0, 0.596}}, 2.5, 0.0}},
+        {{{-0.5, 1.4, -3.}}, 0.5, {BLACK, {{1.0, 0.6, 0.2}}, 8.0, 0.0}},
+        {{{0.5, 1.4, -2.}}, 0.5, {BLACK, {{0.7, 0.2, 1.0}}, 8.0, 0.0}},
+        {{{-0.5, -1.4, -1.5}}, 0.5, {BLACK, {{0.55, 0.863, 1.0}}, 4.5, 0.0}},
+        {{{0.5, -1.4, -3.1}}, 0.5, {BLACK, {{0.431, 1.0, 0.596}}, 4.5, 0.0}},
         {{{0, 0, -504}}, 500, {WHITE, BLACK, 0.0, 0.0}},
         {{{0, 501, 0}}, 500, {WHITE, BLACK, 0.0, 0.0}},
         {{{-0.4, -0.5, -3.3}}, 0.5, {SKY, BLACK, 0.0, 1.0}},
-        {{{0.2, -0.7, -2}}, 0.3, {SKY, BLACK, 0.0, 0.5}},
+        // {{{0.2, -0.7, -2}}, 0.3, {SKY, BLACK, 0.0, 0.5}},
     };
 
-    triangle h_triangle_list[2] = {
-        // {point A, point B, point C, {couleur de l'objet, couleur d'émission, intensité d'émission (> 1), intensité de réflexion (entre 0 et 1)}}
-        {{-0.8, -0.8, -3.2}, {0.8, -0.8, -3.2}, {0, 0.8, -3.2}, {BLUE, BLACK, 0.0, 0.5}},
-        {{-0.5, -0.2, -2}, {0.4, -0.7, -2}, {0, 0.8, -2}, {{1.0, 0., 1.0}, BLACK, 0.0, 0.5}},
-    };
+    // triangle h_triangle_list[2] = {
+    //     // {point A, point B, point C, {couleur de l'objet, couleur d'émission, intensité d'émission (> 1), intensité de réflexion (entre 0 et 1)}}
+    //     {{-0.8, -0.8, -3.2}, {0.8, -0.8, -3.2}, {0, 0.8, -3.2}, {BLUE, BLACK, 0.0, 0.5}},
+    //     {{-0.5, -0.2, -2}, {0.4, -0.7, -2}, {0, 0.8, -2}, {{1.0, 0., 1.0}, BLACK, 0.0, 0.5}},
+    // };
 
     // nom du fichier
     char nomFichier[100];
     time_t maintenant = time(NULL); // Obtenir l'heure actuelle
     struct tm *temps = localtime(&maintenant); // Convertir en structure tm
 
-    sprintf(nomFichier, "TRIANGLE_%dRAYS_%dRB_%02d-%02d_%02dh%02d.ppm", nbRayonParPixel, nbRebondMax-1, temps->tm_mday, temps->tm_mon + 1, temps->tm_hour, temps->tm_min);
+    sprintf(nomFichier, "MESH_%dRAYS_%dRB_%02d-%02d_%02dh%02d.ppm", nbRayonParPixel, nbRebondMax-1, temps->tm_mday, temps->tm_mon + 1, temps->tm_hour, temps->tm_min);
 
     ////////////////////////////////////////////////////////
+    ////////////////////////////////////////////////////////
+
+    // assimp part
+    ////////////////////////////////////////////////////////
+
+    const struct aiScene* scene = aiImportFile("1tree_tri.obj", aiProcess_Triangulate);
+
+    if (scene == NULL) {
+        printf("Error parsing: %s\n", aiGetErrorString());
+        return false;
+    }
+
+    int total_triangles = 0;
+    for (int i = 0; i < scene->mNumMeshes; i++) {
+        const struct aiMesh* mesh = scene->mMeshes[i];
+        total_triangles += mesh->mNumFaces;
+    }
+    printf("num triangles dans mesh : %d\n", total_triangles);
+
+    triangle* h_triangle_list = (triangle*)malloc(total_triangles * sizeof(triangle));
+
+    int triangle_index = 0;
+
+    vec3 displacement = {{0.3, -1.1, -2.1}};
+
+    for (int i = 0; i < scene->mNumMeshes; i++) {
+        const struct aiMesh* mesh = scene->mMeshes[i];
+        const struct aiMaterial* material = scene->mMaterials[mesh->mMaterialIndex];
+
+        // Get the diffuse color of the material
+        aiColor4D aiColor;
+        if (AI_SUCCESS == aiGetMaterialColor(material, AI_MATKEY_COLOR_DIFFUSE, &aiColor)) {
+            printf("Diffuse color: %f %f %f\n", aiColor.r, aiColor.g, aiColor.b);
+        }
+
+        color my_col = {{aiColor.r, aiColor.g, aiColor.b}};
+
+
+        // Get the shininess of the material
+        float shininess;
+        if (AI_SUCCESS == aiGetMaterialFloat(material, AI_MATKEY_SHININESS, &shininess)) {
+            printf("Shininess: %f\n", shininess);
+        }
+
+        for (int j = 0; j < mesh->mNumFaces; j++) {
+            const struct aiFace face = mesh->mFaces[j];
+
+            triangle* tri = &h_triangle_list[triangle_index];
+
+            tri->A = add(aiVector3D_to_vec3(mesh->mVertices[face.mIndices[0]]), displacement);
+            printf("%f %f %f   ", tri->A.e[0], tri->A.e[1], tri->A.e[2]);
+            tri->B = add(aiVector3D_to_vec3(mesh->mVertices[face.mIndices[1]]), displacement);
+            printf("%f %f %f   ", tri->B.e[0], tri->B.e[1], tri->B.e[2]);
+            tri->C = add(aiVector3D_to_vec3(mesh->mVertices[face.mIndices[2]]), displacement);
+            printf("%f %f %f\n", tri->C.e[0], tri->C.e[1], tri->C.e[2]);
+            tri->mat = {my_col, BLACK, 0.0, (double)shininess};
+
+            printf("index : %d\n", triangle_index);
+
+            triangle_index++;
+        }
+    }
+
+    printf("triangle 1, A : %f %f %f\n", h_triangle_list[1].A.e[0], h_triangle_list[1].A.e[1], h_triangle_list[1].A.e[2]);
+
     ////////////////////////////////////////////////////////
 
     int nbSpheres = sizeof(h_sphere_list) / sizeof(h_sphere_list[0]);
-    int nbTriangles = sizeof(h_triangle_list) / sizeof(h_triangle_list[0]);
+    int nbTriangles = total_triangles;
+
+    printf("num triangles dans liste : %d\n", nbTriangles);
     FILE *fichier = fopen(nomFichier, "w");
 
     // temps d'execution
@@ -317,6 +389,9 @@ int main(){
     cudaFree(d_sphere_list);
     cudaFree(d_triangle_list);
     cudaFree(states);
+
+    aiReleaseImport(scene);
+    free(h_triangle_list);
 
     // enregistrer le moment d'arrivée
     cudaEventRecord(stop, 0);

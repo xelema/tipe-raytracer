@@ -1,6 +1,10 @@
 #ifndef VEC3_H
 #define VEC3_H
 
+#include <assimp/cimport.h>
+#include <assimp/scene.h>
+#include <assimp/postprocess.h>
+
 #include <stdio.h>
 #include <math.h>
 
@@ -160,6 +164,15 @@ __host__ __device__ color color_clamp(vec3 v, double min, double max){
 
     return res;
 }
+
+__host__ __device__ vec3 aiVector3D_to_vec3(C_STRUCT aiVector3D aiVec) {
+    vec3 v;
+    v.e[0] = aiVec.x;
+    v.e[1] = aiVec.y;
+    v.e[2] = aiVec.z;
+    return v;
+}
+
 
 // void print_vec3(vec3 v) {
 //     printf("%f %f %f", v.e[0], v.e[1], v.e[2]);
