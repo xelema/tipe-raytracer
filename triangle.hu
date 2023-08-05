@@ -3,6 +3,12 @@
 
 #include "vec3.hu"
 #include "hitinfo.hu"
+#include <assimp/aabb.h>
+
+typedef struct {
+    point3 bmin;
+    point3 bmax;
+} BBox;
 
 typedef struct Triangle{
     point3 A;
@@ -10,6 +16,184 @@ typedef struct Triangle{
     point3 C;
     material mat;
 } triangle;
+
+typedef struct {
+    vec3 A;
+    vec3 B;
+    vec3 C;
+    vec3 normalA;
+    vec3 normalB;
+    vec3 normalC;
+    vec3 uvA;
+    vec3 uvB;
+    vec3 uvC;
+    material mat;
+} extended_triangle;
+
+typedef struct {
+    int nbTriangles;
+    int nbVertices;
+    int fstTriangleIndex;
+    BBox bb;
+    material mat;
+    extended_triangle* triangle_list;
+} mesh_info;
+
+__host__ __device__ bool hit_BBox(ray r, BBox box){
+    double t1_x = (box.bmin.e[0] - r.origin.e[0]) / r.dir.e[0];
+    double t2_x = (box.bmax.e[0] - r.origin.e[0]) / r.dir.e[0];
+    double tmin_x = min(t1_x, t2_x);
+    double tmax_x = max(t1_x, t2_x);
+
+    double t1_y = (box.bmin.e[1] - r.origin.e[1]) / r.dir.e[1];
+    double t2_y = (box.bmax.e[1] - r.origin.e[1]) / r.dir.e[1];
+    double tmin_y = min(t1_y, t2_y);
+    double tmax_y = max(t1_y, t2_y);
+
+    double t1_z = (box.bmin.e[2] - r.origin.e[2]) / r.dir.e[2];
+    double t2_z = (box.bmax.e[2] - r.origin.e[2]) / r.dir.e[2];
+    double tmin_z = min(t1_z, t2_z);
+    double tmax_z = max(t1_z, t2_z);
+
+    return (min(min(tmax_x, tmax_y), tmax_z) - max(max(tmin_x, tmin_y), tmin_z) > 0);
+}
+
+__host__ mesh_info* load_geometry_data(const char* filename, int* nbMeshes) {
+
+    const struct aiScene* scene = aiImportFile(filename, aiProcess_Triangulate);
+
+    if (scene == NULL) {
+        printf("Error parsing: %s\n", aiGetErrorString());
+        return NULL;
+    }
+
+    int total_meshes = scene->mNumMeshes;
+    mesh_info* mesh_list = (mesh_info*)malloc(total_meshes * sizeof(mesh_info));
+    if (mesh_list == NULL) {
+        printf("Memory allocation failed.\n");
+        return NULL;
+    }
+
+    int total_triangles = 0;
+    int total_vertices = 0;
+    int fstTriangleInd = 0;
+
+    for (int i = 0; i < scene->mNumMeshes; i++) {
+        const struct aiMesh* mesh = scene->mMeshes[i];
+        total_triangles += mesh->mNumFaces;
+        total_vertices += mesh->mNumVertices;
+    }
+
+    vec3 displacement = {{0.3, -1.01, -2.1}}; //permet de deplacer l'obj si il est mal placé (sinon faire dans blender ça marche bien)
+
+    for (int i = 0; i < scene->mNumMeshes; i++) {
+        const struct aiMesh* mesh = scene->mMeshes[i];
+        const struct aiMaterial* material = scene->mMaterials[mesh->mMaterialIndex];
+
+        aiColor4D aiColor;
+        printf("\nMesh numero : %d\n", i);
+        if (AI_SUCCESS == aiGetMaterialColor(material, AI_MATKEY_COLOR_DIFFUSE, &aiColor)) {
+            printf("Couleur diffuse: %f %f %f\n", aiColor.r, aiColor.g, aiColor.b);
+        }
+
+        float shininess;
+        if (AI_SUCCESS == aiGetMaterialFloat(material, AI_MATKEY_SHININESS, &shininess)) {
+            printf("Brillance: %f\n", shininess);
+        }
+
+        color my_col = {{aiColor.r, aiColor.g, aiColor.b}};
+        mesh_list[i].mat={my_col, BLACK, 0.0, (double)(shininess/100)};
+        mesh_list[i].nbTriangles = mesh->mNumFaces;
+        mesh_list[i].nbVertices = mesh->mNumVertices;
+        mesh_list[i].fstTriangleIndex = fstTriangleInd;
+        
+        extended_triangle* triangle_list_tmp = (extended_triangle*)malloc(mesh_list[i].nbTriangles * sizeof(extended_triangle));
+
+        for (int j = 0; j < mesh->mNumFaces; j++) {
+            const struct aiFace face = mesh->mFaces[j];
+
+            extended_triangle tri;
+
+            // sommets
+            tri.A = add(aiVector3D_to_vec3(mesh->mVertices[face.mIndices[0]]), displacement);
+            tri.B = add(aiVector3D_to_vec3(mesh->mVertices[face.mIndices[1]]), displacement);
+            tri.C = add(aiVector3D_to_vec3(mesh->mVertices[face.mIndices[2]]), displacement);
+
+            // normal
+            if (mesh->mNormals) {
+                tri.normalA = aiVector3D_to_vec3(mesh->mNormals[face.mIndices[0]]);
+                tri.normalB = aiVector3D_to_vec3(mesh->mNormals[face.mIndices[1]]);
+                tri.normalC = aiVector3D_to_vec3(mesh->mNormals[face.mIndices[2]]);
+            }
+
+            // uv
+            if (mesh->mTextureCoords[0]) {
+                tri.uvA = aiVector2D_to_vec3(mesh->mTextureCoords[0][face.mIndices[0]]);
+                tri.uvB = aiVector2D_to_vec3(mesh->mTextureCoords[0][face.mIndices[1]]);
+                tri.uvC = aiVector2D_to_vec3(mesh->mTextureCoords[0][face.mIndices[2]]);
+            }
+
+            triangle_list_tmp[j] = tri;
+            fstTriangleInd++;
+        }
+        mesh_list[i].triangle_list = triangle_list_tmp;
+        
+    }
+
+    BBox bb;
+    bb.bmax = mesh_list[0].triangle_list[0].A;
+    bb.bmin = mesh_list[0].triangle_list[0].A;
+
+    for (int i = 0; i < total_meshes; i++){
+        for (int j = 0; j < mesh_list[i].nbTriangles; j++){
+            for (int x = 0; x<3; x++){
+                bb.bmin.e[x] = min(bb.bmin.e[x], mesh_list[i].triangle_list[j].A.e[x]);
+                bb.bmin.e[x] = min(bb.bmin.e[x], mesh_list[i].triangle_list[j].B.e[x]);
+                bb.bmin.e[x] = min(bb.bmin.e[x], mesh_list[i].triangle_list[j].C.e[x]);
+
+                bb.bmax.e[x] = max(bb.bmax.e[x], mesh_list[i].triangle_list[j].A.e[x]);
+                bb.bmax.e[x] = max(bb.bmax.e[x], mesh_list[i].triangle_list[j].B.e[x]);
+                bb.bmax.e[x] = max(bb.bmax.e[x], mesh_list[i].triangle_list[j].C.e[x]);
+            }
+        }
+        mesh_list[i].bb = bb;
+    }
+
+
+    *nbMeshes = total_meshes;
+    aiReleaseImport(scene);
+
+    return mesh_list;
+}
+
+__host__ triangle* mesh_to_triangle_list(mesh_info* mesh_list, int nbMeshes, int nbTrianglesTotal){
+
+    int triangle_index = 0;
+
+    triangle* triangle_list = (triangle*)malloc(nbTrianglesTotal * sizeof(triangle));
+    for (int i = 0; i < nbMeshes; i++){
+
+        for (int j = 0; j < mesh_list[i].nbTriangles ; j++){
+            triangle_list[triangle_index].A = mesh_list[i].triangle_list[j].A;
+            triangle_list[triangle_index].B = mesh_list[i].triangle_list[j].B;
+            triangle_list[triangle_index].C = mesh_list[i].triangle_list[j].C;
+            triangle_list[triangle_index].mat = mesh_list[i].mat;
+
+            triangle_index++;
+        }
+    }
+
+    return triangle_list;
+}
+
+__host__ __device__ triangle extended_tri_to_tri(extended_triangle tri){
+    triangle res;
+    res.A = tri.A;
+    res.B = tri.B;
+    res.C = tri.C;
+    return res;
+}
+
 
 // __host__ __device__ HitInfo hit_triangle(triangle tri, ray r){
 // // https://youtu.be/Fr328siHuVc pour explications
@@ -81,7 +265,7 @@ __host__ __device__ HitInfo hit_triangle(triangle tri, ray r){
     hitInfo.dst = dst;
 
     return hitInfo;
-
 }
+
 
 #endif

@@ -165,13 +165,22 @@ __host__ __device__ color color_clamp(vec3 v, double min, double max){
     return res;
 }
 
-__host__ __device__ vec3 aiVector3D_to_vec3(C_STRUCT aiVector3D aiVec) {
-    vec3 v;
-    v.e[0] = aiVec.x;
-    v.e[1] = aiVec.y;
-    v.e[2] = aiVec.z;
-    return v;
+__host__ __device__ vec3 aiVector3D_to_vec3(C_STRUCT aiVector3D aiV) {
+    vec3 res;
+    res.e[0] = aiV.x;
+    res.e[1] = aiV.y;
+    res.e[2] = aiV.z;
+    return res;
 }
+
+__host__ __device__ vec3 aiVector2D_to_vec3(C_STRUCT aiVector3D aiV) {
+    vec3 res;
+    res.e[0] = aiV.x;
+    res.e[1] = aiV.y;
+    res.e[2] = 0;
+    return res;
+}
+
 
 
 // void print_vec3(vec3 v) {

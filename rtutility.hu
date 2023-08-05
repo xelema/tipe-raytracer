@@ -150,9 +150,6 @@ __host__ __device__ color hsl_to_rgb(color hsl) {
 }
 
 
-
-
-
 // nombre aléatoire entre 0 et 1 avec curand_uniform
 __device__ double randomDouble1(curandState* globalState, int ind) {
     curandState localState = globalState[ind];
@@ -185,9 +182,9 @@ __device__ vec3 random_dir(vec3 normal, curandState* globalState, int ind){
     double theta = 2*3.1415926535897932385*u;
     double phi = acos(2*v - 1);
 
-    dir.e[0] = cos(theta)*sin(phi);
-    dir.e[1] = sin(theta)*sin(phi);
-    dir.e[2] = cos(phi);
+    dir.e[0] = __cosf(theta)*__sinf(phi);
+    dir.e[1] = __sinf(theta)*__sinf(phi);
+    dir.e[2] = __cosf(phi);
 
     if (vec3_dot(dir, normal) >= 0){
         return vec3_normalize(dir);
@@ -206,9 +203,9 @@ __device__ vec3 random_dir_no_norm(curandState* globalState, int ind){
     double theta = 2*3.1415926535897932385*u;
     double phi = acos(2*v - 1);
 
-    dir.e[0] = cos(theta)*sin(phi);
-    dir.e[1] = sin(theta)*sin(phi);
-    dir.e[2] = cos(phi);
+    dir.e[0] = __cosf(theta)*__sinf(phi);
+    dir.e[1] = __sinf(theta)*__sinf(phi);
+    dir.e[2] = __cosf(phi);
 
     return vec3_normalize(dir);
 }
