@@ -1,11 +1,6 @@
 #ifndef DENOISER_H
 #define DENOISER_H
 
-#include <stdio.h>
-#include <stdbool.h>
-#include <stdlib.h>
-#include <OpenImageDenoise/oidn.h>
-
 #include "vec3.h"
 #include "ray.h"
 #include "hitinfo.h"
@@ -13,56 +8,27 @@
 #include "rtutility.h"
 #include "camera.h"
 
-HitInfo closest_hit(ray r, sphere* spheres, int nbSpheres);
+typedef struct Col_Alb_Norm{
+	vec3 e[3];
+} col_alb_norm;
 
-void render_normal_albedo(vec3* normal, color* albedo, int hauteur_image, int largeur_image, camera cam, sphere* spheres, int nbSpheres){
-    for (int j = hauteur_image - 1; j >= 0; j--){
-        for (int i = 0; i < largeur_image; i++){
-            int pixel_index = j*largeur_image+i;
-
-            double u = (double)i/(largeur_image-1);
-            double v = (double)j/(hauteur_image-1);
-
-            ray r = get_ray(u, v, cam);
-            HitInfo hitInfo = closest_hit(r, spheres, nbSpheres);
-
-            if (hitInfo.didHit){
-                normal[pixel_index] = hitInfo.normal;
-
-                if (hitInfo.mat.emissionStrength > 0.0){
-                    color HSL = rgb_to_hsl(hitInfo.mat.emissionColor);
-                    HSL.e[2] *= 1.20; // luminosité
-                    HSL.e[1] *= 1.20; // saturation (valeurs subjectives)
-                    color newCol = hsl_to_rgb(HSL);
-                    albedo[pixel_index] = newCol;
-                }
-                else{
-                    albedo[pixel_index] = hitInfo.mat.diffuseColor;
-                }
-            }
-            else{
-                normal[pixel_index] = (color)BLACK;
-                albedo[pixel_index] = (color)BLACK;
-            }
-        }
-    }
+col_alb_norm can_create (vec3 e0, vec3 e1, vec3 e2){
+	col_alb_norm res;
+	res.e[0] = e0;
+	res.e[1] = e1;
+	res.e[2] = e2;
+	return res;
 }
 
-void denoiser(int largeur_image, int hauteur_image, color* canva, camera cam, sphere* spheres, int nbSpheres){
+col_alb_norm add_col_alb_norm(col_alb_norm v1, col_alb_norm v2){
+    col_alb_norm result;
+    result.e[0] = add(v1.e[0], v2.e[0]);
+    result.e[1] = add(v1.e[1], v2.e[1]);
+    result.e[2] = add(v1.e[2], v2.e[2]);
+    return result;
+}
 
-    // tableau pour avoir chaque valeur de pixel au bon endroit, avant rebond de lumière (necessaire au denoise)
-    color* albedo = (color*)malloc((largeur_image * hauteur_image)*sizeof(color));
-    for (int i = 0; i < largeur_image*hauteur_image; i++) {
-        albedo[i] = (color)BLACK;
-    }
-
-    // tableau pour avoir la normale de chaque objet (necessaire au denoise)
-    color* normal = (color*)malloc((largeur_image * hauteur_image)*sizeof(color));
-    for (int i = 0; i < largeur_image*hauteur_image; i++) {
-        normal[i] = (color)BLACK;
-    }
-
-    render_normal_albedo(normal, albedo, hauteur_image, largeur_image, cam, spheres, nbSpheres);
+void denoiser(int largeur_image, int hauteur_image, color* canva, camera cam, color* albedo, color* normal){
 
     // initialise le device OIDN
     OIDNDevice device = oidnNewDevice(OIDN_DEVICE_TYPE_DEFAULT);

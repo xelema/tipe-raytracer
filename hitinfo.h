@@ -2,7 +2,13 @@
 #define HITINFO_H
 
 #include "vec3.h"
-#include "sphere.h"
+
+typedef struct {
+    color diffuseColor;
+    color emissionColor;
+    double emissionStrength;
+    double reflectionStrength;
+} material;
 
 typedef struct{
     bool didHit;

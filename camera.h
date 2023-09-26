@@ -33,16 +33,23 @@ camera init_camera(point3 origin, point3 target, vec3 up, double vfov, double ra
     cam.origin = origin;
     cam.horizontal = multiply_scalar(u, largeur_viewport);
     cam.vertical = multiply_scalar(v, hauteur_viewport);
-    cam.coin_bas_gauche = sub(cam.origin, add(divide(cam.horizontal,2), add(divide(cam.vertical, 2), w)));
+    cam.coin_bas_gauche = sub(cam.origin, add(divide_scalar(cam.horizontal,2), add(divide_scalar(cam.vertical, 2), w)));
     //coin_bas_gauche = origin - horizontal/2 - vertical/2 - profondeur
 
     return cam;
 }
 
-ray get_ray(double u, double v, camera cam){
+ray get_ray(double u, double v, camera cam, double focus_distance, double dx_ouverture, double dy_ouverture){
     ray res;
-    res.origin = cam.origin;
-    res.dir = add(cam.coin_bas_gauche, add(multiply_scalar(cam.horizontal, u), sub(multiply_scalar(cam.vertical, v), cam.origin)));
+
+    vec3 direction = add(cam.coin_bas_gauche, add(multiply_scalar(cam.horizontal, u), sub(multiply_scalar(cam.vertical, v), cam.origin)));
+
+    vec3 destination = add(cam.origin, multiply_scalar(direction, focus_distance));
+    point3 new_origin = add(cam.origin, vec3_create(dx_ouverture, dy_ouverture, 0));
+
+    res.origin = new_origin;
+    res.dir = vec3_normalize(sub(destination, new_origin));
+
     return res;
 }
 

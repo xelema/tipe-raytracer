@@ -9,6 +9,8 @@
 
 // constantes
 
+#define PI 3.1415926535897932385
+
 #define RED {{1, 0, 0}}
 #define GREEN {{0, 1, 0}}
 #define BLUE {{0, 0, 1}}
@@ -17,14 +19,18 @@
 #define SKY {{0.784, 0.965, 1}}
 const point3 light = {{-1, -1, -1}}; // position de la lumière -> pour "fake shadow"
 
-const double pi = 3.1415926535897932385;
-
 // fonctions
 
 double clamp(double x, double min, double max){
     if (x<min) return min;
     if (x>max) return max;
     return x;
+}
+
+vec3 vec3_lerp(vec3 x, vec3 y, double t){
+    vec3 res;
+    res = add(x, multiply_scalar(sub(y, x), t));
+    return res;
 }
 
 // void write_color(FILE *out, color pixel_color) {
@@ -165,12 +171,12 @@ vec3 random_dir(vec3 normal){
     double u = rand()/(RAND_MAX + 1.0);
     double v = rand()/(RAND_MAX + 1.0);
     
-    double theta = 2*pi*u;
+    double theta = 2*PI*u;
     double phi = acos(2*v - 1);
 
-    dir.e[0] = cos(theta)*sin(phi);
-    dir.e[1] = sin(theta)*sin(phi);
-    dir.e[2] = cos(phi);
+    dir.e[0] = cosf(theta)*sinf(phi);
+    dir.e[1] = sinf(theta)*sinf(phi);
+    dir.e[2] = cosf(phi);
 
     if (vec3_dot(dir, normal) >= 0){
         return vec3_normalize(dir);
@@ -186,12 +192,12 @@ vec3 random_dir_no_norm(){
     double u = rand()/(RAND_MAX + 1.0);
     double v = rand()/(RAND_MAX + 1.0);
     
-    double theta = 2*pi*u;
+    double theta = 2*PI*u;
     double phi = acos(2*v - 1);
 
-    dir.e[0] = cos(theta)*sin(phi);
-    dir.e[1] = sin(theta)*sin(phi);
-    dir.e[2] = cos(phi);
+    dir.e[0] = cosf(theta)*sinf(phi);
+    dir.e[1] = sinf(theta)*sinf(phi);
+    dir.e[2] = cosf(phi);
 
     return vec3_normalize(dir);
 }
