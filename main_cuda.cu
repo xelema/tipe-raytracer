@@ -116,7 +116,7 @@ __device__ col_alb_norm tracer(ray r, int nbRebondMax, curandState* globalState,
 
             if (useAO){ // calcul avec occlusion ambiante (notamment augmentation des lumières)
 
-                color emittedLight = multiply_scalar(mat.emissionColor, mat.emissionStrength * AO_intensity);
+                color emittedLight = multiply_scalar(mat.emissionColor, mat.emissionStrength * 1.5 * AO_intensity);
 
                 incomingLight = add(incomingLight,multiply(emittedLight, rayColor));
                 rayColor = multiply(mat.diffuseColor, rayColor);

@@ -1,0 +1,12 @@
+# Blender 3.6.4 MTL File: 'None'
+# www.blender.org
+
+newmtl Grass_Block_TEX
+Ns 96.078453
+Ka 1.000000 1.000000 1.000000
+Ks 0.139456 0.139456 0.139456
+Ke 0.000000 0.000000 0.000000
+Ni 1.000000
+d 1.000000
+illum 2
+map_Kd Grass_Block_TEX.png
