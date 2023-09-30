@@ -5,6 +5,11 @@
 #include "hitinfo.h"
 #include "ray.h"
 
+typedef struct UV{
+    double u;
+    double v;
+} UV;
+
 typedef struct Triangle{
     point3 A;
     point3 B;

@@ -69,7 +69,7 @@ HitInfo closest_hit(ray r, sphere* sphere_list, int nbSpheres, triangle* triangl
         if (hitInfo.didHit && hitInfo.dst < closestHit.dst){
             closestHit = hitInfo;
             closestHit.mat = tri.mat;
-            closestHit.mat.diffuseColor = get_texture_color2(tri, hitInfo, tex_list, tex_width, tex_height);
+            closestHit.mat.diffuseColor = get_texture_color(tri, hitInfo, tex_list, tex_width, tex_height);
         }
     }
     return closestHit;
@@ -220,14 +220,14 @@ int main(){
     double ouverture_y = 0.0;
 
     //qualité et performance
-    int nbRayonParPixel = 800;
-    int nbRebondMax = 7;
+    int nbRayonParPixel = 100;
+    int nbRebondMax = 5;
     
     #define NUM_THREADS 16
 
-    bool useDenoiser = true;
+    bool useDenoiser = false;
 
-    bool useAO = true; // occlusion ambiante, rendu environ 2x plus lent
+    bool useAO = false; // occlusion ambiante, rendu environ 2x plus lent
     double AO_intensity = 3; // supérieur à 1 pour augmenter l'intensité
 
     //position des sphères dans la scène

@@ -1,12 +1,7 @@
 #ifndef TEXTURE_H
 #define TEXTURE_H
 
-#include "triangle.h"
-
-typedef struct UV{
-    double u;
-    double v;
-} UV;
+#include "mesh.h"
 
 point3 get_barycentric_coord(triangle tri, HitInfo hitInfo){
     point3 res;
@@ -21,7 +16,7 @@ point3 get_barycentric_coord(triangle tri, HitInfo hitInfo){
     return res;
 }
 
-color get_texture_color2(triangle tri, HitInfo hitInfo, color* text_list, int texture_width, int texture_height) {
+color get_texture_color(triangle tri, HitInfo hitInfo, color* text_list, int texture_width, int texture_height) {
     UV uv;
     point3 bary = get_barycentric_coord(tri, hitInfo);
 

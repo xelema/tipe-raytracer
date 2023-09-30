@@ -57,9 +57,10 @@ Implémentation d'un Ray Tracer pour mon exposé de TIPE.
 
 - Compiler avec 
   ```sh
-  gcc -o prog main.c -O3 -lm -lpthread
+  gcc -o prog main.c -O3 -lm -lpthread -lOpenImageDenoise
+
   ```
-Attention à bien modifier `#define NUM_THREADS 12` dans `main.c`, et le denoiser ne fonctionne pas chez moi, faut que je me penche dessus
+Attention à bien modifier `#define NUM_THREADS 12` dans `main.c`
 
 ## CUDA
 Si vous avez une carte graphique NVIDIA :
