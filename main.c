@@ -24,6 +24,7 @@ struct ThreadData {
     color* albedo_tab; 
     color* normal_tab;
     color* tex_list;
+    material* mat_list;
     camera cam;
     
     int largeur_image, hauteur_image;
@@ -44,7 +45,7 @@ int rendered_pixels = 0;
 
 ///////////////////////////////////////////////////////////////////////////////////////////////
 
-HitInfo closest_hit(ray r, sphere* sphere_list, int nbSpheres, triangle* triangle_list, int nbTriangles, color* tex_list, int tex_width, int tex_height){
+HitInfo closest_hit(ray r, sphere* sphere_list, int nbSpheres, triangle* triangle_list, int nbTriangles, material* mat_list, int tex_width, int tex_height){
 
     HitInfo closestHit;
     closestHit.didHit=false;
@@ -58,6 +59,7 @@ HitInfo closest_hit(ray r, sphere* sphere_list, int nbSpheres, triangle* triangl
         if (hitInfo.didHit && hitInfo.dst < closestHit.dst){
             closestHit = hitInfo;
             closestHit.mat = s.mat;
+            closestHit.mat.alpha = 1.0;
         }
     }
 
@@ -67,15 +69,17 @@ HitInfo closest_hit(ray r, sphere* sphere_list, int nbSpheres, triangle* triangl
         HitInfo hitInfo = hit_triangle(tri, r);
 
         if (hitInfo.didHit && hitInfo.dst < closestHit.dst){
+            material MaterialTex = get_material_from_matlist(tri, hitInfo, mat_list, tex_width, tex_height);
             closestHit = hitInfo;
             closestHit.mat = tri.mat;
-            closestHit.mat.diffuseColor = get_texture_color(tri, hitInfo, tex_list, tex_width, tex_height);
+            closestHit.mat.diffuseColor = MaterialTex.diffuseColor;
+            closestHit.mat.alpha = MaterialTex.alpha;
         }
     }
     return closestHit;
 }
 
-color ambient_occlusion(vec3 point, vec3 normal, sphere* sphere_list, int nbSpheres, triangle* triangle_list, int nbTriangles, double AO_intensity, color* tex_list, int tex_width, int tex_height) {
+color ambient_occlusion(vec3 point, vec3 normal, sphere* sphere_list, int nbSpheres, triangle* triangle_list, int nbTriangles, double AO_intensity, material* mat_list, int tex_width, int tex_height) {
     const int nbSamples = 1; // pour l'instant 1 suffit, à voir pour d'autres scènes
 
     color occlusion = BLACK;
@@ -85,7 +89,7 @@ color ambient_occlusion(vec3 point, vec3 normal, sphere* sphere_list, int nbSphe
         vec3 hemisphereDir = add(normal, randomDir);
         ray occlusionRay = {point, vec3_normalize(hemisphereDir)};
 
-        HitInfo occlusionHit = closest_hit(occlusionRay, sphere_list, nbSpheres, triangle_list, nbTriangles, tex_list, tex_width, tex_height);
+        HitInfo occlusionHit = closest_hit(occlusionRay, sphere_list, nbSpheres, triangle_list, nbTriangles, mat_list, tex_width, tex_height);
 
         if (occlusionHit.didHit) {
             double distance = vec3_length(sub(occlusionHit.hitPoint, point));
@@ -99,10 +103,10 @@ color ambient_occlusion(vec3 point, vec3 normal, sphere* sphere_list, int nbSphe
     return divide_scalar(divide_scalar(occlusion, nbSamples), AO_intensity);
 }
 
-col_alb_norm tracer(ray r, int nbRebondMax, sphere* sphere_list, int nbSpheres, triangle* triangle_list, int nbTriangles, double AO_intensity, bool useAO, color* tex_list, int tex_width, int tex_height){
+col_alb_norm tracer(ray r, int nbRebondMax, sphere* sphere_list, int nbSpheres, triangle* triangle_list, int nbTriangles, double AO_intensity, bool useAO, material* mat_list, int tex_width, int tex_height){
 
     // cas des lumières
-    HitInfo hitInfo = closest_hit(r, sphere_list, nbSpheres, triangle_list, nbTriangles, tex_list, tex_width, tex_height); 
+    HitInfo hitInfo = closest_hit(r, sphere_list, nbSpheres, triangle_list, nbTriangles, mat_list, tex_width, tex_height); 
     if (hitInfo.didHit){
         if (hitInfo.mat.emissionStrength > 0){
             color HSL = rgb_to_hsl(hitInfo.mat.emissionColor);
@@ -119,33 +123,39 @@ col_alb_norm tracer(ray r, int nbRebondMax, sphere* sphere_list, int nbSpheres, 
 
     for (int i = 0; i<nbRebondMax; i++){
 
-        HitInfo hitInfo = closest_hit(r, sphere_list, nbSpheres, triangle_list, nbTriangles, tex_list, tex_width, tex_height);
+        HitInfo hitInfo = closest_hit(r, sphere_list, nbSpheres, triangle_list, nbTriangles, mat_list, tex_width, tex_height);
 
-        if (hitInfo.didHit){
-            material mat = hitInfo.mat;
+        if (hitInfo.didHit){   
+            if(hitInfo.mat.alpha > 0.9){
+                material mat = hitInfo.mat;
 
-            r.origin = hitInfo.hitPoint;
-            vec3 diffuse_dir = vec3_normalize(add(hitInfo.normal,random_dir_no_norm())); // sebastian lague
-            vec3 reflected_dir = sub(r.dir, multiply_scalar(hitInfo.normal, 2*vec3_dot(r.dir, hitInfo.normal)));
-            r.dir = vec3_lerp(diffuse_dir, reflected_dir, mat.reflectionStrength);
+                r.origin = hitInfo.hitPoint;
+                vec3 diffuse_dir = vec3_normalize(add(hitInfo.normal,random_dir_no_norm())); // sebastian lague
+                vec3 reflected_dir = sub(r.dir, multiply_scalar(hitInfo.normal, 2*vec3_dot(r.dir, hitInfo.normal)));
+                r.dir = vec3_lerp(diffuse_dir, reflected_dir, mat.reflectionStrength);
 
-            if (useAO){ // calcul avec occlusion ambiante (notamment augmentation des lumières)
+                if (useAO){ // calcul avec occlusion ambiante (notamment augmentation des lumières)
 
-                color emittedLight = multiply_scalar(mat.emissionColor, mat.emissionStrength * 1.5 * AO_intensity);
+                    color emittedLight = multiply_scalar(mat.emissionColor, mat.emissionStrength * 1.5 * AO_intensity);
 
-                incomingLight = add(incomingLight,multiply(emittedLight, rayColor));
-                rayColor = multiply(mat.diffuseColor, rayColor);
+                    incomingLight = add(incomingLight,multiply(emittedLight, rayColor));
+                    rayColor = multiply(mat.diffuseColor, rayColor);
 
-                color occlusion = ambient_occlusion(hitInfo.hitPoint, hitInfo.normal, sphere_list, nbSpheres, triangle_list, nbTriangles, AO_intensity, tex_list, tex_width, tex_height);
-                rayColor = multiply(rayColor, occlusion); // applique l'occlusion ambiante à la couleur du rayon
+                    color occlusion = ambient_occlusion(hitInfo.hitPoint, hitInfo.normal, sphere_list, nbSpheres, triangle_list, nbTriangles, AO_intensity, mat_list, tex_width, tex_height);
+                    rayColor = multiply(rayColor, occlusion); // applique l'occlusion ambiante à la couleur du rayon
+                }
+
+                else{  // calcul sans occlusion ambiante
+
+                    color emittedLight = multiply_scalar(mat.emissionColor, mat.emissionStrength);
+
+                    incomingLight = add(incomingLight,multiply(emittedLight, rayColor));
+                    rayColor = multiply(mat.diffuseColor, rayColor);
+                }
             }
-
-            else{  // calcul sans occlusion ambiante
-
-                color emittedLight = multiply_scalar(mat.emissionColor, mat.emissionStrength);
-
-                incomingLight = add(incomingLight,multiply(emittedLight, rayColor));
-                rayColor = multiply(mat.diffuseColor, rayColor);
+            else{
+                r.origin = hitInfo.hitPoint;
+                continue;
             }
         }
         else{
@@ -183,7 +193,7 @@ void* fill_canva(void *arg) {
                 double dy_ouverture = randomDouble(-0.5, 0.5) * data->ouverture_y;
 
                 ray r = get_ray(u, v, data->cam, data->focus_distance, dx_ouverture, dy_ouverture);
-                totalLight = add_col_alb_norm(totalLight, tracer(r, data->nbRebondMax, data->sphere_list, data->nbSpheres, data->triangle_list, data->nbTriangles, data->AO_intensity, data->useAO, data->tex_list, data->tex_width, data->tex_height)); 
+                totalLight = add_col_alb_norm(totalLight, tracer(r, data->nbRebondMax, data->sphere_list, data->nbSpheres, data->triangle_list, data->nbTriangles, data->AO_intensity, data->useAO, data->mat_list, data->tex_width, data->tex_height)); 
             }
 
             data->canva[pixel_index] = write_color_canva(totalLight.e[0], data->nbRayonParPixel);
@@ -211,24 +221,35 @@ int main(){
     //position de la camera
     double vfov = 70; // fov vertical en degrée
     
-    point3 origin = {{-0.7, 0, 0}}; // position de la camera
-    point3 target = {{0.3, -0.5, -3}}; // cible de la camera
+    point3 origin = {{0.34, 0.3, 0.5}}; // position de la camera
+    point3 target = {{0.0, -0.5, -3}}; // cible de la camera
     vec3 up = {{0, 1, 0}}; // permet de modifier la rotation selon l'axe z ({{0, 1, 0}} pour horizontal)
 
     double focus_distance = 3; // distance de mise au point (depth of field)
-    double ouverture_x = 0.0;
-    double ouverture_y = 0.0;
+    double ouverture_x = 0.0; // quantité de dof horizontal
+    double ouverture_y = 0.0; // quantité de dof vertical
 
     //qualité et performance
-    int nbRayonParPixel = 100;
-    int nbRebondMax = 5;
+    int nbRayonParPixel = 200;
+    int nbRebondMax = 8;
     
     #define NUM_THREADS 16
 
-    bool useDenoiser = false;
+    bool useDenoiser = true;
 
-    bool useAO = false; // occlusion ambiante, rendu environ 2x plus lent
-    double AO_intensity = 3; // supérieur à 1 pour augmenter l'intensité
+    bool useAO = true; // occlusion ambiante, rendu environ 2x plus lent
+    double AO_intensity = 2.5; // supérieur à 1 pour augmenter l'intensité
+
+    // chemin des fichiers de mesh
+    char* obj_file = "model3D/1st_mc_world/tree/tree_tri.obj"; // chemin du fichier obj
+    char* tex_file = "model3D/1st_mc_world/tree/tex.ppm"; // chemin du fichier de texture (converti en PPM P3)
+    char* alpha_file = "model3D/1st_mc_world/tree/tex_alpha.ppm"; // chemin du fichier d'alpha (converti en PPM P3)
+
+    // nom du fichier de sortie
+    char nomFichier[100];
+    time_t maintenant = time(NULL); // heure actuelle pour le nom du fichier
+    struct tm *temps = localtime(&maintenant);
+    sprintf(nomFichier, "world_alpha_%dRAYS_%dRB_%02d-%02d_%02dh%02d.ppm", nbRayonParPixel, nbRebondMax-1, temps->tm_mday, temps->tm_mon + 1, temps->tm_hour, temps->tm_min);
 
     //position des sphères dans la scène
     sphere sphere_list[10] = {
@@ -236,31 +257,15 @@ int main(){
         {{{-501,0,0}}, 500, {GREEN, BLACK, 0.0, 0.96}},
         {{{0,-501,0}}, 500, {WHITE, BLACK, 0.0, 0.0}},
         {{{501, 0, 0}}, 500, {RED, BLACK, 0.0, 0.96}},
-        {{{-0.5, 1.4, -3}}, 0.5, {BLACK, {{1.0, 0.6, 0.2}}, 4.0, 0.0}},
-        {{{0.5, 1.4, -2.2}}, 0.5, {BLACK, {{0.7, 0.2, 1.0}}, 4.0, 0.0}},
-        {{{-0.5, -1.4, -1.5}}, 0.5, {BLACK, {{0.55, 0.863, 1.0}}, 2.5, 0.0}},
-        {{{0.5, -1.4, -3.1}}, 0.5, {BLACK, {{0.431, 1.0, 0.596}}, 2.5, 0.0}},
+        {{{-0.5, 1.4, -1.2}}, 0.5, {BLACK, {{1.0, 0.6, 0.2}}, 4.0, 0.0}}, // orange
+        {{{0.5, 1.4, -2.2}}, 0.5, {BLACK, {{0.7, 0.2, 1.0}}, 4.0, 0.0}}, // violet
+        {{{0.6, -1.4, -1.0}}, 0.5, {BLACK, {{0.55, 0.863, 1.0}}, 2.5, 0.0}}, // bleu clair
+        {{{-0.5, -1.4, -3.1}}, 0.5, {BLACK, {{0.431, 1.0, 0.596}}, 2.5, 0.0}}, // vert clair
         {{{0, 0, -504}}, 500, {WHITE, BLACK, 0.0, 0.0}},
         {{{0, 501, 0}}, 500, {WHITE, BLACK, 0.0, 0.0}},
-        {{{-0.4, -0.5, -3.3}}, 0.5, {SKY, BLACK, 0.0, 0.999}},
+        {{{0.4, -0.5, -3.3}}, 0.5, {SKY, BLACK, 0.0, 0.999}},
         // {{{0.2, -0.7, -2}}, 0.3, {SKY, BLACK, 0.0, 0.5}},
     };
-
-    // // liste de color pour la texture du mesh
-    int tex_width, tex_height;
-    color* tex_list = create_tex_list("model3D/grass_block/Grass_Block_TEX.PPM", &tex_width, &tex_height);
-
-    // liste de triangle qui forment un mesh (a partir d'un fichier obj)
-    int nbTriangles;
-    triangle* mesh_list = list_of_mesh("model3D/grass_block/block_tri.obj", &nbTriangles);
-    move_mesh(0.3, -1.0, -2, &mesh_list, nbTriangles); // translation (x, y, z)
-
-    // nom du fichier
-    char nomFichier[100];
-    time_t maintenant = time(NULL); // Obtenir l'heure actuelle
-    struct tm *temps = localtime(&maintenant); // Convertir en structure tm
-
-    sprintf(nomFichier, "textures_%dRAYS_%dRB_%02d-%02d_%02dh%02d.ppm", nbRayonParPixel, nbRebondMax-1, temps->tm_mday, temps->tm_mon + 1, temps->tm_hour, temps->tm_min);
 
     ////////////////////////////////////////////////////////
     ////////////////////////////////////////////////////////
@@ -268,6 +273,15 @@ int main(){
     // temps d'execution
     struct timeval start_time, end_time;
     gettimeofday (&start_time, NULL);
+
+    // // liste de material pour la texture du mesh
+    int tex_width, tex_height;
+    material* mat_list = create_mat_list(tex_file, alpha_file, &tex_width, &tex_height);
+
+    // liste de triangle qui forment un mesh (a partir d'un fichier obj)
+    int nbTriangles;
+    triangle* mesh_list = list_of_mesh(obj_file, &nbTriangles);
+    move_mesh(-0.4, -1.0, -2, &mesh_list, nbTriangles); // translation (x, y, z) du mesh
 
     int total_pixels = largeur_image * hauteur_image;
     int nbSpheres = sizeof(sphere_list) / sizeof(sphere_list[0]);
@@ -331,7 +345,7 @@ int main(){
         thread_data[i].triangle_list = mesh_list;
         thread_data[i].albedo_tab = albedo_tab;
         thread_data[i].normal_tab = normal_tab;
-        thread_data[i].tex_list = tex_list;
+        thread_data[i].mat_list = mat_list;
         thread_data[i].tex_height = tex_height;
         thread_data[i].tex_width = tex_width;
 
@@ -348,6 +362,7 @@ int main(){
 
     fprintf(fichier, "P3\n%d %d\n255\n", largeur_image, hauteur_image);
 
+    // rendu normal
     for (int j = hauteur_image-1; j >= 0  ; j--){ 
         for (int i = 0; i < largeur_image; i++){
             int pixel_index = j*largeur_image+i;
@@ -355,12 +370,21 @@ int main(){
         }
     }
 
+    // rendu albedo
+    // for (int j = hauteur_image-1; j >= 0  ; j--){ 
+    //     for (int i = 0; i < largeur_image; i++){
+    //         int pixel_index = j*largeur_image+i;
+    //         fprintf(fichier, "%d %d %d\n", (int)(albedo_tab[pixel_index].e[0]*255), (int)(albedo_tab[pixel_index].e[1]*255), (int)(albedo_tab[pixel_index].e[2]*255));
+    //     }
+    // }
+
     fclose(fichier);    
     free(canva);
     free(albedo_tab);
     free(normal_tab);
     free(mesh_list);
-    free(tex_list);
+    // free(tex_list);
+    free(mat_list);
 
     gettimeofday(&end_time, NULL);
 

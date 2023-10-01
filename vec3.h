@@ -139,7 +139,7 @@ vec3 vec3_normalize(vec3 v){
 }
 
 void print_vec3(vec3 v) {
-    printf("%f %f %f", v.e[0], v.e[1], v.e[2]);
+    printf("%f %f %f\n", v.e[0], v.e[1], v.e[2]);
 }
 
 typedef vec3 point3;

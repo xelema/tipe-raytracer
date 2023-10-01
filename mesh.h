@@ -4,6 +4,7 @@
 #include "vec3.h"
 #include "hitinfo.h"
 #include "ray.h"
+#include "rtutility.h"
 
 typedef struct UV{
     double u;
@@ -88,8 +89,6 @@ HitInfo hit_triangle(triangle tri, ray r){
     hitInfo.hitPoint = add(r.origin, multiply_scalar(r.dir, dst));
     hitInfo.normal = vec3_normalize(normalVect);
     hitInfo.dst = dst;
-    hitInfo.u = u;
-    hitInfo.v = v;
 
     return hitInfo;
 }
