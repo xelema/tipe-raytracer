@@ -202,6 +202,11 @@ vec3 random_dir_no_norm(){
     return vec3_normalize(dir);
 }
 
+vec3 reflected_vec(vec3 v, vec3 n){
+    vec3 res = sub(v, multiply_scalar(n, 2*vec3_dot(v, n)));
+    return res;
+}
+
 double randomDouble(double min, double max){
     return min + (max-min)*(rand()/(RAND_MAX + 1.0));
 }

@@ -110,7 +110,7 @@ col_alb_norm tracer(ray r, int nbRebondMax, sphere* sphere_list, int nbSpheres, 
     if (hitInfo.didHit){
         if (hitInfo.mat.emissionStrength > 0){
             color HSL = rgb_to_hsl(hitInfo.mat.emissionColor);
-            HSL.e[2] *= 1.20; // luminosité
+            HSL.e[2] *= 1.20; // luminosité (valeurs subjectives)
             HSL.e[1] *= 1.20; // saturation (valeurs subjectives)
             color newCol = hsl_to_rgb(HSL);
             return can_create(newCol, hitInfo.mat.emissionColor, hitInfo.normal);
@@ -120,18 +120,30 @@ col_alb_norm tracer(ray r, int nbRebondMax, sphere* sphere_list, int nbSpheres, 
     // pas une lumière
     color incomingLight = BLACK;
     color rayColor = WHITE;
+    color albedo_color = BLACK; // denoiser
+    color normal_color = BLACK; // denoiser
+    bool is_alpha = false; // denoiser
 
     for (int i = 0; i<nbRebondMax; i++){
 
         HitInfo hitInfo = closest_hit(r, sphere_list, nbSpheres, triangle_list, nbTriangles, mat_list, tex_width, tex_height);
-
+        
+        if (i==0){ // denoiser cas de base
+            albedo_color = hitInfo.mat.diffuseColor;
+            normal_color = hitInfo.normal;
+        }
+        if (i==1 && is_alpha){ // denoiser cas alpha (trou dans la texture)
+            albedo_color = hitInfo.mat.diffuseColor;
+            normal_color = hitInfo.normal;
+            is_alpha = false;
+        }
         if (hitInfo.didHit){   
             if(hitInfo.mat.alpha > 0.9){
                 material mat = hitInfo.mat;
 
                 r.origin = hitInfo.hitPoint;
                 vec3 diffuse_dir = vec3_normalize(add(hitInfo.normal,random_dir_no_norm())); // sebastian lague
-                vec3 reflected_dir = sub(r.dir, multiply_scalar(hitInfo.normal, 2*vec3_dot(r.dir, hitInfo.normal)));
+                vec3 reflected_dir = reflected_vec(r.dir, hitInfo.normal);
                 r.dir = vec3_lerp(diffuse_dir, reflected_dir, mat.reflectionStrength);
 
                 if (useAO){ // calcul avec occlusion ambiante (notamment augmentation des lumières)
@@ -155,6 +167,7 @@ col_alb_norm tracer(ray r, int nbRebondMax, sphere* sphere_list, int nbSpheres, 
             }
             else{
                 r.origin = hitInfo.hitPoint;
+                is_alpha = true;
                 continue;
             }
         }
@@ -162,8 +175,9 @@ col_alb_norm tracer(ray r, int nbRebondMax, sphere* sphere_list, int nbSpheres, 
             break;
         }
     }
-    return can_create(incomingLight, hitInfo.mat.diffuseColor, hitInfo.normal);
+    return can_create(incomingLight, albedo_color, normal_color);
 }
+
 
 
 void* fill_canva(void *arg) {
@@ -231,7 +245,7 @@ int main(){
 
     //qualité et performance
     int nbRayonParPixel = 200;
-    int nbRebondMax = 8;
+    int nbRebondMax = 5;
     
     #define NUM_THREADS 16
 
@@ -241,7 +255,7 @@ int main(){
     double AO_intensity = 2.5; // supérieur à 1 pour augmenter l'intensité
 
     // chemin des fichiers de mesh
-    char* obj_file = "model3D/1st_mc_world/tree/tree_tri.obj"; // chemin du fichier obj
+    char* obj_file = "model3D/1st_mc_world/tree/tree_tri_less.obj"; // chemin du fichier obj
     char* tex_file = "model3D/1st_mc_world/tree/tex.ppm"; // chemin du fichier de texture (converti en PPM P3)
     char* alpha_file = "model3D/1st_mc_world/tree/tex_alpha.ppm"; // chemin du fichier d'alpha (converti en PPM P3)
 
@@ -375,6 +389,14 @@ int main(){
     //     for (int i = 0; i < largeur_image; i++){
     //         int pixel_index = j*largeur_image+i;
     //         fprintf(fichier, "%d %d %d\n", (int)(albedo_tab[pixel_index].e[0]*255), (int)(albedo_tab[pixel_index].e[1]*255), (int)(albedo_tab[pixel_index].e[2]*255));
+    //     }
+    // }
+
+    // rendu normales
+    // for (int j = hauteur_image-1; j >= 0  ; j--){ 
+    //     for (int i = 0; i < largeur_image; i++){
+    //         int pixel_index = j*largeur_image+i;
+    //         fprintf(fichier, "%d %d %d\n", (int)((normal_tab[pixel_index].e[0]*0.5+0.5)*255), (int)((normal_tab[pixel_index].e[1]*0.5+0.5)*255), (int)((normal_tab[pixel_index].e[2]*0.5+0.5)*255));
     //     }
     // }
 
