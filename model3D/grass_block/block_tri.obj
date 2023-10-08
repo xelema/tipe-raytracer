@@ -1,6 +1,6 @@
 # Blender 3.6.4
 # www.blender.org
-mtllib block_tri.mtl
+mtllib ./block_tri.mtl
 o Grass_Block_Cube
 v 0.300000 0.000001 -0.300000
 v 0.300000 0.000001 0.300000

@@ -29,6 +29,7 @@ struct ThreadData {
     
     int largeur_image, hauteur_image;
     int tex_width, tex_height;
+    int* quelMatPourTri;
     int nbRayonParPixel, nbRebondMax;
     int total_pixels;
     sphere* sphere_list;
@@ -45,7 +46,7 @@ int rendered_pixels = 0;
 
 ///////////////////////////////////////////////////////////////////////////////////////////////
 
-HitInfo closest_hit(ray r, sphere* sphere_list, int nbSpheres, triangle* triangle_list, int nbTriangles, material* mat_list, int tex_width, int tex_height){
+HitInfo closest_hit(ray r, sphere* sphere_list, int nbSpheres, triangle* triangle_list, int nbTriangles, material* mat_list, int tex_width, int tex_height, int* quelMatPourTri){
 
     HitInfo closestHit;
     closestHit.didHit=false;
@@ -69,7 +70,7 @@ HitInfo closest_hit(ray r, sphere* sphere_list, int nbSpheres, triangle* triangl
         HitInfo hitInfo = hit_triangle(tri, r);
 
         if (hitInfo.didHit && hitInfo.dst < closestHit.dst){
-            material MaterialTex = get_material_from_matlist(tri, hitInfo, mat_list, tex_width, tex_height);
+            material MaterialTex = get_material_from_matlist2(tri, hitInfo, mat_list, tex_width, tex_height, i, quelMatPourTri);
             closestHit = hitInfo;
             closestHit.mat = tri.mat;
             closestHit.mat.diffuseColor = MaterialTex.diffuseColor;
@@ -79,7 +80,7 @@ HitInfo closest_hit(ray r, sphere* sphere_list, int nbSpheres, triangle* triangl
     return closestHit;
 }
 
-color ambient_occlusion(vec3 point, vec3 normal, sphere* sphere_list, int nbSpheres, triangle* triangle_list, int nbTriangles, double AO_intensity, material* mat_list, int tex_width, int tex_height) {
+color ambient_occlusion(vec3 point, vec3 normal, sphere* sphere_list, int nbSpheres, triangle* triangle_list, int nbTriangles, double AO_intensity, material* mat_list, int tex_width, int tex_height, int* quelMatPourTri) {
     const int nbSamples = 1; // pour l'instant 1 suffit, à voir pour d'autres scènes
 
     color occlusion = BLACK;
@@ -89,7 +90,7 @@ color ambient_occlusion(vec3 point, vec3 normal, sphere* sphere_list, int nbSphe
         vec3 hemisphereDir = add(normal, randomDir);
         ray occlusionRay = {point, vec3_normalize(hemisphereDir)};
 
-        HitInfo occlusionHit = closest_hit(occlusionRay, sphere_list, nbSpheres, triangle_list, nbTriangles, mat_list, tex_width, tex_height);
+        HitInfo occlusionHit = closest_hit(occlusionRay, sphere_list, nbSpheres, triangle_list, nbTriangles, mat_list, tex_width, tex_height, quelMatPourTri);
 
         if (occlusionHit.didHit) {
             double distance = vec3_length(sub(occlusionHit.hitPoint, point));
@@ -103,10 +104,10 @@ color ambient_occlusion(vec3 point, vec3 normal, sphere* sphere_list, int nbSphe
     return divide_scalar(divide_scalar(occlusion, nbSamples), AO_intensity);
 }
 
-col_alb_norm tracer(ray r, int nbRebondMax, sphere* sphere_list, int nbSpheres, triangle* triangle_list, int nbTriangles, double AO_intensity, bool useAO, material* mat_list, int tex_width, int tex_height){
+col_alb_norm tracer(ray r, int nbRebondMax, sphere* sphere_list, int nbSpheres, triangle* triangle_list, int nbTriangles, double AO_intensity, bool useAO, material* mat_list, int tex_width, int tex_height, int* quelMatPourTri){
 
     // cas des lumières
-    HitInfo hitInfo = closest_hit(r, sphere_list, nbSpheres, triangle_list, nbTriangles, mat_list, tex_width, tex_height); 
+    HitInfo hitInfo = closest_hit(r, sphere_list, nbSpheres, triangle_list, nbTriangles, mat_list, tex_width, tex_height, quelMatPourTri); 
     if (hitInfo.didHit){
         if (hitInfo.mat.emissionStrength > 0){
             color HSL = rgb_to_hsl(hitInfo.mat.emissionColor);
@@ -126,7 +127,7 @@ col_alb_norm tracer(ray r, int nbRebondMax, sphere* sphere_list, int nbSpheres, 
 
     for (int i = 0; i<nbRebondMax; i++){
 
-        HitInfo hitInfo = closest_hit(r, sphere_list, nbSpheres, triangle_list, nbTriangles, mat_list, tex_width, tex_height);
+        HitInfo hitInfo = closest_hit(r, sphere_list, nbSpheres, triangle_list, nbTriangles, mat_list, tex_width, tex_height, quelMatPourTri);
         
         if (i==0){ // denoiser cas de base
             albedo_color = hitInfo.mat.diffuseColor;
@@ -153,7 +154,7 @@ col_alb_norm tracer(ray r, int nbRebondMax, sphere* sphere_list, int nbSpheres, 
                     incomingLight = add(incomingLight,multiply(emittedLight, rayColor));
                     rayColor = multiply(mat.diffuseColor, rayColor);
 
-                    color occlusion = ambient_occlusion(hitInfo.hitPoint, hitInfo.normal, sphere_list, nbSpheres, triangle_list, nbTriangles, AO_intensity, mat_list, tex_width, tex_height);
+                    color occlusion = ambient_occlusion(hitInfo.hitPoint, hitInfo.normal, sphere_list, nbSpheres, triangle_list, nbTriangles, AO_intensity, mat_list, tex_width, tex_height, quelMatPourTri);
                     rayColor = multiply(rayColor, occlusion); // applique l'occlusion ambiante à la couleur du rayon
                 }
 
@@ -207,7 +208,7 @@ void* fill_canva(void *arg) {
                 double dy_ouverture = randomDouble(-0.5, 0.5) * data->ouverture_y;
 
                 ray r = get_ray(u, v, data->cam, data->focus_distance, dx_ouverture, dy_ouverture);
-                totalLight = add_col_alb_norm(totalLight, tracer(r, data->nbRebondMax, data->sphere_list, data->nbSpheres, data->triangle_list, data->nbTriangles, data->AO_intensity, data->useAO, data->mat_list, data->tex_width, data->tex_height)); 
+                totalLight = add_col_alb_norm(totalLight, tracer(r, data->nbRebondMax, data->sphere_list, data->nbSpheres, data->triangle_list, data->nbTriangles, data->AO_intensity, data->useAO, data->mat_list, data->tex_width, data->tex_height, data->quelMatPourTri)); 
             }
 
             data->canva[pixel_index] = write_color_canva(totalLight.e[0], data->nbRayonParPixel);
@@ -244,10 +245,10 @@ int main(){
     double ouverture_y = 0.0; // quantité de dof vertical
 
     //qualité et performance
-    int nbRayonParPixel = 200;
-    int nbRebondMax = 5;
+    int nbRayonParPixel = 5;
+    int nbRebondMax = 3;
     
-    #define NUM_THREADS 16
+    #define NUM_THREADS 12
 
     bool useDenoiser = true;
 
@@ -255,15 +256,14 @@ int main(){
     double AO_intensity = 2.5; // supérieur à 1 pour augmenter l'intensité
 
     // chemin des fichiers de mesh
-    char* obj_file = "model3D/1st_mc_world/tree/tree_tri_less.obj"; // chemin du fichier obj
-    char* tex_file = "model3D/1st_mc_world/tree/tex.ppm"; // chemin du fichier de texture (converti en PPM P3)
-    char* alpha_file = "model3D/1st_mc_world/tree/tex_alpha.ppm"; // chemin du fichier d'alpha (converti en PPM P3)
+    char* obj_file = "model3D/books/book_tri.obj"; // chemin du fichier obj
+    char* mtl_file = "model3D/books/book_tri.mtl"; // chemin du fichier mtl (textures dans le format PPM P3)
 
-    // nom du fichier de sortie
+    // nom du fichier de sorties
     char nomFichier[100];
     time_t maintenant = time(NULL); // heure actuelle pour le nom du fichier
     struct tm *temps = localtime(&maintenant);
-    sprintf(nomFichier, "world_alpha_%dRAYS_%dRB_%02d-%02d_%02dh%02d.ppm", nbRayonParPixel, nbRebondMax-1, temps->tm_mday, temps->tm_mon + 1, temps->tm_hour, temps->tm_min);
+    sprintf(nomFichier, "multiple_tex_%dRAYS_%dRB_%02d-%02d_%02dh%02d.ppm", nbRayonParPixel, nbRebondMax-1, temps->tm_mday, temps->tm_mon + 1, temps->tm_hour, temps->tm_min);
 
     //position des sphères dans la scène
     sphere sphere_list[10] = {
@@ -277,7 +277,7 @@ int main(){
         {{{-0.5, -1.4, -3.1}}, 0.5, {BLACK, {{0.431, 1.0, 0.596}}, 2.5, 0.0}}, // vert clair
         {{{0, 0, -504}}, 500, {WHITE, BLACK, 0.0, 0.0}},
         {{{0, 501, 0}}, 500, {WHITE, BLACK, 0.0, 0.0}},
-        {{{0.4, -0.5, -3.3}}, 0.5, {SKY, BLACK, 0.0, 0.999}},
+        {{{0.4, -0.5, -3.3}}, 0.5, {SKY, BLACK, 0.0, 0.99}},
         // {{{0.2, -0.7, -2}}, 0.3, {SKY, BLACK, 0.0, 0.5}},
     };
 
@@ -288,14 +288,22 @@ int main(){
     struct timeval start_time, end_time;
     gettimeofday (&start_time, NULL);
 
-    // // liste de material pour la texture du mesh
-    int tex_width, tex_height;
-    material* mat_list = create_mat_list(tex_file, alpha_file, &tex_width, &tex_height);
-
     // liste de triangle qui forment un mesh (a partir d'un fichier obj)
-    int nbTriangles;
-    triangle* mesh_list = list_of_mesh(obj_file, &nbTriangles);
+    int nbTriangles, nbMaterials;
+    char** mat_path_list;
+    int* quelSommetPourMaterial;
+    int* quelMatPourTri;
+    triangle* mesh_list = list_of_mesh(obj_file, mtl_file, &nbTriangles, &nbMaterials, &mat_path_list, &quelSommetPourMaterial, &quelMatPourTri);
+
+    // printf("Sommets [%d], mat[%d] : %s\n", quelSommetPourMaterial[0], 0,  mat_path_list[0]);
+    // printf("\nMat numero %d pour le triangle %d et c'est le mat %s\n", quelMatPourTri[0], 0, mat_path_list[quelMatPourTri[0]]);
+
     move_mesh(-0.4, -1.0, -2, &mesh_list, nbTriangles); // translation (x, y, z) du mesh
+    printf("%s : %d textures loaded\n\n", mtl_file, nbMaterials);
+
+    // liste de material pour la texture du mesh
+    int tex_width, tex_height;
+    material* mat_list = create_mat_list(mat_path_list, &tex_width, &tex_height, nbMaterials);
 
     int total_pixels = largeur_image * hauteur_image;
     int nbSpheres = sizeof(sphere_list) / sizeof(sphere_list[0]);
@@ -362,6 +370,7 @@ int main(){
         thread_data[i].mat_list = mat_list;
         thread_data[i].tex_height = tex_height;
         thread_data[i].tex_width = tex_width;
+        thread_data[i].quelMatPourTri = quelMatPourTri;
 
         pthread_create(&threads[i], NULL, fill_canva, (void*)&thread_data[i]);
 
