@@ -70,7 +70,7 @@ HitInfo closest_hit(ray r, sphere* sphere_list, int nbSpheres, triangle* triangl
         HitInfo hitInfo = hit_triangle(tri, r);
 
         if (hitInfo.didHit && hitInfo.dst < closestHit.dst){
-            material MaterialTex = get_material_from_matlist2(tri, hitInfo, mat_list, tex_width, tex_height, i, quelMatPourTri);
+            material MaterialTex = get_material_from_matlist(tri, hitInfo, mat_list, tex_width, tex_height, i, quelMatPourTri);
             closestHit = hitInfo;
             closestHit.mat = tri.mat;
             closestHit.mat.diffuseColor = MaterialTex.diffuseColor;
@@ -139,7 +139,7 @@ col_alb_norm tracer(ray r, int nbRebondMax, sphere* sphere_list, int nbSpheres, 
             is_alpha = false;
         }
         if (hitInfo.didHit){   
-            if(hitInfo.mat.alpha > 0.9){
+            if(hitInfo.mat.alpha > 0.5){
                 material mat = hitInfo.mat;
 
                 r.origin = hitInfo.hitPoint;
@@ -236,8 +236,8 @@ int main(){
     //position de la camera
     double vfov = 70; // fov vertical en degrée
     
-    point3 origin = {{0.34, 0.3, 0.5}}; // position de la camera
-    point3 target = {{0.0, -0.5, -3}}; // cible de la camera
+    point3 origin = {{0.5, 0.8, 0.0}}; // position de la camera
+    point3 target = {{-0.5, -0.3, -2}}; // cible de la camera
     vec3 up = {{0, 1, 0}}; // permet de modifier la rotation selon l'axe z ({{0, 1, 0}} pour horizontal)
 
     double focus_distance = 3; // distance de mise au point (depth of field)
@@ -245,10 +245,10 @@ int main(){
     double ouverture_y = 0.0; // quantité de dof vertical
 
     //qualité et performance
-    int nbRayonParPixel = 5;
-    int nbRebondMax = 3;
+    int nbRayonParPixel = 100;
+    int nbRebondMax = 5;
     
-    #define NUM_THREADS 12
+    #define NUM_THREADS 16
 
     bool useDenoiser = true;
 
@@ -256,14 +256,14 @@ int main(){
     double AO_intensity = 2.5; // supérieur à 1 pour augmenter l'intensité
 
     // chemin des fichiers de mesh
-    char* obj_file = "model3D/books/book_tri.obj"; // chemin du fichier obj
-    char* mtl_file = "model3D/books/book_tri.mtl"; // chemin du fichier mtl (textures dans le format PPM P3)
+    char* obj_file = "model3D/mcworld_tiltedtex_water/mineways_tri.obj"; // chemin du fichier obj
+    char* mtl_file = "model3D/mcworld_tiltedtex_water/mineways_tri.mtl"; // chemin du fichier mtl (textures dans le format PPM P3)
 
     // nom du fichier de sorties
     char nomFichier[100];
     time_t maintenant = time(NULL); // heure actuelle pour le nom du fichier
     struct tm *temps = localtime(&maintenant);
-    sprintf(nomFichier, "multiple_tex_%dRAYS_%dRB_%02d-%02d_%02dh%02d.ppm", nbRayonParPixel, nbRebondMax-1, temps->tm_mday, temps->tm_mon + 1, temps->tm_hour, temps->tm_min);
+    sprintf(nomFichier, "tilted_tex_%dRAYS_%dRB_%02d-%02d_%02dh%02d.ppm", nbRayonParPixel, nbRebondMax-1, temps->tm_mday, temps->tm_mon + 1, temps->tm_hour, temps->tm_min);
 
     //position des sphères dans la scène
     sphere sphere_list[10] = {
@@ -278,7 +278,7 @@ int main(){
         {{{0, 0, -504}}, 500, {WHITE, BLACK, 0.0, 0.0}},
         {{{0, 501, 0}}, 500, {WHITE, BLACK, 0.0, 0.0}},
         {{{0.4, -0.5, -3.3}}, 0.5, {SKY, BLACK, 0.0, 0.99}},
-        // {{{0.2, -0.7, -2}}, 0.3, {SKY, BLACK, 0.0, 0.5}},
+        // {{{-0.5, -0.3, -2}}, 0.3, {SKY, BLACK, 0.0, 0.5}},
     };
 
     ////////////////////////////////////////////////////////
@@ -298,7 +298,7 @@ int main(){
     // printf("Sommets [%d], mat[%d] : %s\n", quelSommetPourMaterial[0], 0,  mat_path_list[0]);
     // printf("\nMat numero %d pour le triangle %d et c'est le mat %s\n", quelMatPourTri[0], 0, mat_path_list[quelMatPourTri[0]]);
 
-    move_mesh(-0.4, -1.0, -2, &mesh_list, nbTriangles); // translation (x, y, z) du mesh
+    move_mesh(-0.6, -1.0, -2, &mesh_list, nbTriangles); // translation (x, y, z) du mesh
     printf("%s : %d textures loaded\n\n", mtl_file, nbMaterials);
 
     // liste de material pour la texture du mesh
@@ -385,7 +385,7 @@ int main(){
 
     fprintf(fichier, "P3\n%d %d\n255\n", largeur_image, hauteur_image);
 
-    // rendu normal
+    // // rendu ray-tracing
     for (int j = hauteur_image-1; j >= 0  ; j--){ 
         for (int i = 0; i < largeur_image; i++){
             int pixel_index = j*largeur_image+i;
@@ -401,7 +401,7 @@ int main(){
     //     }
     // }
 
-    // rendu normales
+    // // rendu normales
     // for (int j = hauteur_image-1; j >= 0  ; j--){ 
     //     for (int i = 0; i < largeur_image; i++){
     //         int pixel_index = j*largeur_image+i;

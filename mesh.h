@@ -164,7 +164,7 @@ triangle* list_of_mesh(const char *filename, const char *mtl_file, int *numTrian
     rewind(file);
 
     // lis les faces et les matériaux
-    int path_mat_ind = 0;
+    int path_mat_ind = -1;
     char mat_name[256] = "";
     while (fgets(line, sizeof(line), file)) {
         if (line[0] == 'f') {
@@ -175,15 +175,15 @@ triangle* list_of_mesh(const char *filename, const char *mtl_file, int *numTrian
         }
         else if (line[0] == 'u' && line[1] == 's' && line[2] == 'e' && line[3] == 'm' && line[4] == 't' && line[5] == 'l') {
             sscanf(line, "usemtl %[^\n]", mat_name);
-            mat_path_list[path_mat_ind] = tex_path_from_mtl(mtl_file, strdup(mat_name));
-            (*quelSommetPourMat_list_ptr)[path_mat_ind] = quelSommet_ind/3;
+            mat_path_list[path_mat_ind+1] = tex_path_from_mtl(mtl_file, strdup(mat_name));
+            (*quelSommetPourMat_list_ptr)[path_mat_ind+1] = quelSommet_ind/3;
             
             path_mat_ind++;
         }
     }
 
     // for(int i = 0; i<nbMaterial; i++){
-    //     printf("Sommets [%d], mat[%d] : %s\n", (*quelSommetPourMat_list_ptr)[i], i,  mat_path_list[i]);
+    //     printf("Triangle : [%d], Mat[%d] : %s\n", (*quelSommetPourMat_list_ptr)[i], i,  mat_path_list[i]);
     // }
 
     // for(int i = 0; i<nbTriangle; i++){
@@ -215,8 +215,6 @@ triangle* list_of_mesh(const char *filename, const char *mtl_file, int *numTrian
     free(quelTexture_list);
     return mesh_list;
 }
-
-
 
 void move_mesh(double x, double y, double z, triangle** mesh_list, int nbTriangle){
     for (int i = 0; i<nbTriangle; i++){

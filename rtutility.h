@@ -273,6 +273,13 @@ char* tex_path_from_mtl(const char* mtl_filename, const char* texture_name) {
     return NULL;
 }
 
+vec3 refracted_vec(vec3 v, vec3 normal, double n1, double n2){
+    double cos_theta = fmin(vec3_dot(multiply_scalar(v, -1), normal), 1.0);
+    vec3 out_perp = multiply_scalar((add(v, multiply_scalar(normal, cos_theta))), (n1/n2)); // raytracing in one wk
+    vec3 out_parallel = multiply_scalar(normal, -sqrt(fabs(1.0 - vec3_length_squared(out_perp))));
+    vec3 res = add(out_perp, out_parallel);
+    return res;
+}
 
 
 #endif
