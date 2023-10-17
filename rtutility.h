@@ -223,7 +223,6 @@ char* tex_path_from_mtl(const char* mtl_filename, const char* texture_name) {
     char* texture_path = NULL;
     char* mtl_directory = NULL;
 
-    // Extraire le répertoire du fichier MTL
     char* last_slash = strrchr(mtl_filename, '/');
     if (last_slash != NULL) {
         size_t directory_length = last_slash - mtl_filename + 1;
@@ -234,24 +233,23 @@ char* tex_path_from_mtl(const char* mtl_filename, const char* texture_name) {
 
     while (fgets(line, sizeof(line), mtl_file) != NULL) {
         if (strncmp(line, "newmtl ", 7) == 0) {
-            // Trouvé un nouveau matériau
             char* material_name = line + 7;
-            material_name[strlen(material_name) - 1] = '\0'; // Supprimer le saut de ligne
+            material_name[strlen(material_name) - 1] = '\0'; // supprime le saut de ligne
 
             if (strcmp(material_name, texture_name) == 0) {
-                // Trouvé le matériau recherché
+                // trouve le matériau recherché
                 while (fgets(line, sizeof(line), mtl_file) != NULL) {
                     if (strncmp(line, "map_Kd ", 7) == 0) {
-                        // Trouvé la ligne de chemin de texture
+                        // trouve la ligne de chemin de texture
                         texture_path = strdup(line + 7);
-                        texture_path[strlen(texture_path) - 1] = '\0'; // Supprimer le saut de ligne
+                        texture_path[strlen(texture_path) - 1] = '\0'; // supprime le saut de ligne
 
-                        // Supprimer le préfixe "./" du chemin de texture, s'il est présent
+                        // supprime le préfixe "./" du chemin de texture, s'il est présent
                         if (strncmp(texture_path, "./", 2) == 0) {
                             memmove(texture_path, texture_path + 2, strlen(texture_path));
                         }
 
-                        // Créer le chemin complet de la texture en concaténant le répertoire du MTL
+                        // recréé le chemin
                         char* complete_texture_path = malloc(strlen(mtl_directory) + strlen(texture_path) + 1);
                         strcpy(complete_texture_path, mtl_directory);
                         strcat(complete_texture_path, texture_path);
@@ -272,7 +270,5 @@ char* tex_path_from_mtl(const char* mtl_filename, const char* texture_name) {
     fclose(mtl_file);
     return NULL;
 }
-
-
 
 #endif
