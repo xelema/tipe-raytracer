@@ -117,18 +117,6 @@ color ambient_occlusion(vec3 point, vec3 normal, sphere* sphere_list, int nbSphe
 
 col_alb_norm tracer(ray r, int nbRebondMax, sphere* sphere_list, int nbSpheres, triangle* triangle_list, int nbTriangles, double AO_intensity, bool useAO, material* mat_list, int tex_width, int tex_height, int* quelMatPourTri, material* sky_mat_list, int sky_width, int sky_height) {
 
-    // cas des lumières
-    HitInfo hitInfo = closest_hit(r, sphere_list, nbSpheres, triangle_list, nbTriangles, mat_list, tex_width, tex_height, quelMatPourTri, sky_mat_list, sky_width, sky_height); 
-    if (hitInfo.didHit){
-        if (hitInfo.mat.emissionStrength > 0){
-            color HSL = rgb_to_hsl(hitInfo.mat.emissionColor);
-            HSL.e[2] *= 1.12; // luminosité (valeurs subjectives)
-            HSL.e[1] *= 1.12; // saturation (valeurs subjectives)
-            color newCol = hsl_to_rgb(HSL);
-            return can_create(newCol, hitInfo.mat.emissionColor, hitInfo.normal);
-        }
-    }  
-
     // pas une lumière
     color incomingLight = BLACK;
     color rayColor = WHITE;
@@ -155,6 +143,15 @@ col_alb_norm tracer(ray r, int nbRebondMax, sphere* sphere_list, int nbSpheres, 
             is_alpha = false;
         }
         if (hitInfo.didHit){   
+            // si une lumière
+            if (i==0 && hitInfo.mat.emissionStrength > 0){
+                color HSL = rgb_to_hsl(hitInfo.mat.emissionColor);
+                HSL.e[2] *= 1.12; // luminosité (valeurs subjectives)
+                HSL.e[1] *= 1.12; // saturation (valeurs subjectives)
+                color newCol = hsl_to_rgb(HSL);
+                return can_create(newCol, hitInfo.mat.emissionColor, hitInfo.normal);
+            }
+
             if(hitInfo.mat.alpha > 0.5){
                 r.origin = hitInfo.hitPoint;
                 vec3 diffuse_dir = vec3_normalize(add(hitInfo.normal,random_dir_no_norm())); // sebastian lague
@@ -194,8 +191,6 @@ col_alb_norm tracer(ray r, int nbRebondMax, sphere* sphere_list, int nbSpheres, 
     }
     return can_create(incomingLight, albedo_color, normal_color);
 }
-
-
 
 void* fill_canva(void *arg) {
     struct ThreadData* data = (struct ThreadData*)arg;
@@ -261,10 +256,10 @@ int main(){
     double ouverture_y = 0.0; // quantité de dof vertical
 
     //qualité et performance
-    int nbRayonParPixel = 100;
+    int nbRayonParPixel = 30;
     int nbRebondMax = 5;
     
-    #define NUM_THREADS 16
+    #define NUM_THREADS 12
 
     bool useDenoiser = true;
 
@@ -272,8 +267,8 @@ int main(){
     double AO_intensity = 2.5; // supérieur à 1 pour augmenter l'intensité
 
     // chemin des fichiers de mesh
-    char* obj_file = "model3D/grass_block/block_tri.obj"; // chemin du fichier obj
-    char* mtl_file = "model3D/grass_block/block_tri.mtl"; // chemin du fichier mtl (textures dans le format PPM P3)
+    char* obj_file = "model3D/mcworld_tiltedtex_water/mineways_tri.obj"; // chemin du fichier obj
+    char* mtl_file = "model3D/mcworld_tiltedtex_water/mineways_tri.mtl"; // chemin du fichier mtl (textures dans le format PPM P3)
     char* sky_file = "model3D/hdr/industrial_sunset_puresky.ppm";
 
     // nom du fichier de sorties
