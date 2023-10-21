@@ -125,7 +125,7 @@ col_alb_norm tracer(ray r, int nbRebondMax, sphere* sphere_list, int nbSpheres, 
     color alpha_albedo_color = WHITE;
     color alpha_color = WHITE;
     bool is_alpha = false; // denoiser
-    double alpha_strength = 0;
+    int alpha_depth = 0;
 
     for (int i = 0; i<nbRebondMax; i++){
 
@@ -136,23 +136,28 @@ col_alb_norm tracer(ray r, int nbRebondMax, sphere* sphere_list, int nbSpheres, 
             albedo_color = mat.diffuseColor;
             normal_color = hitInfo.normal;
         }
-        if (i==1 && is_alpha){ // denoiser cas alpha (trou dans la texture)
+        if (i == alpha_depth && is_alpha){ // denoiser cas alpha (trou dans la texture)
             albedo_color = mat.diffuseColor;
-            // mat.diffuseColor = vec3_lerp(mat.diffuseColor, alpha_color, alpha_strength);
+            if(mat.emissionStrength > 0){
+                albedo_color = mat.emissionColor;
+            }
             normal_color = hitInfo.normal;
-            is_alpha = false;
+            
         }
         if (hitInfo.didHit){   
             // si une lumière
-            if (i==0 && hitInfo.mat.emissionStrength > 0){
-                color HSL = rgb_to_hsl(hitInfo.mat.emissionColor);
-                HSL.e[2] *= 1.12; // luminosité (valeurs subjectives)
-                HSL.e[1] *= 1.12; // saturation (valeurs subjectives)
+            if (i==0 && mat.emissionStrength > 0){
+                color HSL = rgb_to_hsl(mat.emissionColor);
+                HSL.e[2] *= 1.0; // luminosité (valeurs subjectives)
+                HSL.e[1] *= 1.0; // saturation (valeurs subjectives)
                 color newCol = hsl_to_rgb(HSL);
-                return can_create(newCol, hitInfo.mat.emissionColor, hitInfo.normal);
+                return can_create(newCol, mat.emissionColor, hitInfo.normal);
             }
 
-            if(hitInfo.mat.alpha > 0.5){
+            if(mat.alpha > 0.98){
+                is_alpha = false;
+                alpha_depth = 0;
+
                 r.origin = hitInfo.hitPoint;
                 vec3 diffuse_dir = vec3_normalize(add(hitInfo.normal,random_dir_no_norm())); // sebastian lague
                 vec3 reflected_dir = reflected_vec(r.dir, hitInfo.normal);
@@ -179,9 +184,9 @@ col_alb_norm tracer(ray r, int nbRebondMax, sphere* sphere_list, int nbSpheres, 
             }
             else{
                 alpha_albedo_color = mat.diffuseColor;
-                alpha_strength = mat.alpha;
                 r.origin = hitInfo.hitPoint;
                 is_alpha = true;
+                alpha_depth++;
                 continue;
             }
         }
@@ -247,8 +252,8 @@ int main(){
     //position de la camera
     double vfov = 70; // fov vertical en degrée
     
-    point3 origin = {{0.5, 0, 0.0}}; // position de la camera
-    point3 target = {{0.38, -0.3, -2}}; // cible de la camera
+    point3 origin = {{0.0, 0.5, -2}}; // position de la camera
+    point3 target = {{0.0, 0, 0}}; // cible de la camera
     vec3 up = {{0, 1, 0}}; // permet de modifier la rotation selon l'axe z ({{0, 1, 0}} pour horizontal)
 
     double focus_distance = 3; // distance de mise au point (depth of field)
@@ -256,8 +261,8 @@ int main(){
     double ouverture_y = 0.0; // quantité de dof vertical
 
     //qualité et performance
-    int nbRayonParPixel = 30;
-    int nbRebondMax = 5;
+    int nbRayonParPixel = 10;
+    int nbRebondMax = 4;
     
     #define NUM_THREADS 12
 
@@ -267,30 +272,31 @@ int main(){
     double AO_intensity = 2.5; // supérieur à 1 pour augmenter l'intensité
 
     // chemin des fichiers de mesh
-    char* obj_file = "model3D/mcworld_tiltedtex_water/mineways_tri.obj"; // chemin du fichier obj
-    char* mtl_file = "model3D/mcworld_tiltedtex_water/mineways_tri.mtl"; // chemin du fichier mtl (textures dans le format PPM P3)
+    char* obj_file = "model3D/mc_camera_test_c4d/mineways_tri_symX.obj"; // chemin du fichier obj
+    char* mtl_file = "model3D/mc_camera_test_c4d/mineways_tri_symX.mtl"; // chemin du fichier mtl (textures dans le format PPM P3)
     char* sky_file = "model3D/hdr/industrial_sunset_puresky.ppm";
 
     // nom du fichier de sorties
     char nomFichier[100];
     time_t maintenant = time(NULL); // heure actuelle pour le nom du fichier
     struct tm *temps = localtime(&maintenant);
-    sprintf(nomFichier, "sky_%dRAYS_%dRB_%02d-%02d_%02dh%02d.ppm", nbRayonParPixel, nbRebondMax-1, temps->tm_mday, temps->tm_mon + 1, temps->tm_hour, temps->tm_min);
+    sprintf(nomFichier, "cave_%dRAYS_%dRB_%02d-%02d_%02dh%02d.ppm", nbRayonParPixel, nbRebondMax-1, temps->tm_mday, temps->tm_mon + 1, temps->tm_hour, temps->tm_min);
 
     //position des sphères dans la scène
+    // ATTENTION : derniere sphere = ciel
     sphere sphere_list[] = {
         //{position du centre x, y, z}, rayon, {couleur de l'objet, couleur d'emission, intensité d'emission (> 1), intensité de reflection (entre 0 et 1)}
         // {{{-501,0,0}}, 500, {GREEN, BLACK, 0.0, 0.96}}, // mur vert
-        {{{0,-501,0}}, 500, {WHITE, BLACK, 0.0, 0.0}}, // sol blanc
+        // {{{0,-501,0}}, 500, {WHITE, BLACK, 0.0, 0.0}}, // sol blanc
         // {{{501, 0, 0}}, 500, {RED, BLACK, 0.0, 0.96}}, // mur rouge
-        {{{-0.5, 1.9, -1.2}}, 1.0, {BLACK, {{1.0, 0.6, 0.2}}, 5.0, 0.0}}, // lumiere orange
-        {{{5.5, 6.4, -2.2}}, 5, {BLACK, {{0.7, 0.2, 1.0}}, 5.0, 0.0}}, // lumiere violet
+        // {{{-0.5, 1.9, -1.2}}, 1.0, {BLACK, {{1.0, 0.6, 0.2}}, 5.0, 0.0}}, // lumiere orange
+        // {{{5.5, 6.4, -2.2}}, 5, {BLACK, {{0.7, 0.2, 1.0}}, 5.0, 0.0}}, // lumiere violet
         // {{{0.6, -1.4, -1.0}}, 0.5, {BLACK, {{0.55, 0.863, 1.0}}, 3.5, 0.0}}, // lumiere bleu clair
         // {{{-0.5, -1.4, -3.1}}, 0.5, {BLACK, {{0.431, 1.0, 0.596}}, 3.5, 0.0}}, // lumiere vert clair
         // {{{0, 0, -504}}, 500, {WHITE, BLACK, 0.0, 0.0}}, // fond blanc
         // {{{0, 501, 0}}, 500, {WHITE, BLACK, 0.0, 0.0}}, // plafond blanc
-        {{{1.7, -0.5, -3.3}}, 0.5, {SKY, BLACK, 0.0, 0.99}}, // boule miroir
-        {{{1.7, -1, -2.2}}, 0.3, {SKY, BLACK, 0.0, 0.85}},
+        // {{{1.7, -0.5, -3.3}}, 0.5, {SKY, BLACK, 0.0, 0.99}}, // boule miroir
+        // {{{1.7, -1, -2.2}}, 0.3, {SKY, BLACK, 0.0, 0.85}},
         {{{0.0, 0.0, 0.0}}, 1000, {BLACK, SKY, 1.2, 0.0}}, // ciel
         // {{{150.0, 150.0, -300.0}}, 100, {BLACK, WHITE, 2.0, 0.0}}, // soleil
     };
@@ -312,7 +318,7 @@ int main(){
     // printf("Sommets [%d], mat[%d] : %s\n", quelSommetPourMaterial[0], 0,  mat_path_list[0]);
     // printf("\nMat numero %d pour le triangle %d et c'est le mat %s\n", quelMatPourTri[0], 0, mat_path_list[quelMatPourTri[0]]);
 
-    move_mesh(-0.2, -1.6, -2.3, &mesh_list, nbTriangles); // translation (x, y, z) du mesh
+    move_mesh(0, 0, 0, &mesh_list, nbTriangles); // translation (x, y, z) du mesh
     printf("%s : %d textures loaded\n\n", mtl_file, nbMaterials);
 
     // liste de material pour la texture du mesh
@@ -436,6 +442,7 @@ int main(){
     free(mesh_list);
     // free(tex_list);
     free(mat_list);
+    free(sky_mat_list);
 
     gettimeofday(&end_time, NULL);
 
