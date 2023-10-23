@@ -66,9 +66,41 @@ material tri_uvmapping(triangle tri, HitInfo hitInfo, material* mat_list, int te
     material res;
     res = mat_list[index];
 
-    if (quelMatPourSommet[indice_tri] == 6 || quelMatPourSommet[indice_tri] == 7) {
-        res.reflectionStrength =  0.93;
+    if (quelMatPourSommet[indice_tri] == 10){
+        res.reflectionStrength =  0.40;
     }
+
+    // if (quelMatPourSommet[indice_tri] == 2 || quelMatPourSommet[indice_tri] == 12 || quelMatPourSommet[indice_tri] == 25){
+    //     res.emissionColor = mat_list[index].diffuseColor;
+    //     res.emissionStrength = 32.0;
+    //     res.reflectionStrength = 0.0;
+    // }
+
+    // if (quelMatPourSommet[indice_tri] == 42){
+    //     res.emissionColor = mat_list[index].diffuseColor;
+    //     res.emissionStrength = 24.0;
+    //     res.reflectionStrength = 0.0;
+    // }
+
+    // if (quelMatPourSommet[indice_tri] == 27){
+    //     res.emissionColor = mat_list[index].diffuseColor;
+    //     res.emissionStrength = 8.0;
+    //     res.reflectionStrength = 0.0;
+    // }
+
+    // if (quelMatPourSommet[indice_tri] == 50 || quelMatPourSommet[indice_tri] == 53){
+    //     if ((res.diffuseColor.e[0]*255+res.diffuseColor.e[1]*255+res.diffuseColor.e[2]*255) > 288){
+    //         res.emissionColor = mat_list[index].diffuseColor;
+    //         res.emissionStrength = 48.0;
+    //         res.reflectionStrength = 0.0;
+    //     }
+    // }
+
+    // if (quelMatPourSommet[indice_tri] == 5) {
+    //     res.emissionColor = mat_list[index].diffuseColor;
+    //     res.reflectionStrength = 0.0;
+    //     res.emissionStrength = 5.0;
+    // }
 
     return res;
 }
@@ -227,6 +259,7 @@ material* create_mat_list_mtl(char **path_file, int *width, int *height, int nbM
             int global_ind = index+((*height)*(*width)*global_ind_mult);
             res_mat_list[global_ind].diffuseColor = mat_list[index].diffuseColor;
             res_mat_list[global_ind].alpha = mat_list[index].alpha;
+            res_mat_list[global_ind].emissionStrength = 0.0;
 
             // // si lumiere
             // res_mat_list[global_ind].emissionColor = mat_list[index].diffuseColor;
@@ -317,6 +350,7 @@ material* create_mat_list_mtl(char **path_file, int *width, int *height, int nbM
                     int global_ind = index+((*height)*(*width)*global_ind_mult);
                     res_mat_list[global_ind].diffuseColor = mat_list[index].diffuseColor;
                     res_mat_list[global_ind].alpha = mat_list[index].alpha;
+                    res_mat_list[global_ind].emissionStrength = 0.0;
 
                     // // si lumiere
                     // res_mat_list[global_ind].emissionColor = mat_list[index].diffuseColor;

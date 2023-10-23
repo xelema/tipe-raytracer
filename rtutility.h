@@ -5,6 +5,7 @@
 #include <float.h>
 #include <stdlib.h>
 #include <string.h>
+#include <assert.h>
 #include "ray.h"
 #include "vec3.h"
 
