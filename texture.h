@@ -66,9 +66,20 @@ material tri_uvmapping(triangle tri, HitInfo hitInfo, material* mat_list, int te
     material res;
     res = mat_list[index];
 
-    if (quelMatPourSommet[indice_tri] == 10){
-        res.reflectionStrength =  0.40;
+    if (quelMatPourSommet[indice_tri] == 2){
+        res.emissionStrength =  5;
+        res.emissionColor = mat_list[index].diffuseColor;
     }
+
+    if (quelMatPourSommet[indice_tri] == 7){
+        res.emissionStrength =  3.5;
+        res.emissionColor = mat_list[index].diffuseColor;
+    }
+
+    if (quelMatPourSommet[indice_tri] == 0){
+        res.reflectionStrength = 0.95;
+    }
+    
 
     // if (quelMatPourSommet[indice_tri] == 2 || quelMatPourSommet[indice_tri] == 12 || quelMatPourSommet[indice_tri] == 25){
     //     res.emissionColor = mat_list[index].diffuseColor;
