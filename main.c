@@ -169,6 +169,9 @@ col_alb_norm tracer(ray r, int nbRebondMax, sphere* sphere_list, int nbSpheres, 
                     color emittedLight = multiply_scalar(mat.emissionColor, mat.emissionStrength * 1.5 * AO_intensity);
 
                     incomingLight = add(incomingLight,multiply(emittedLight, rayColor));
+                    if(rayColor.e[0] > 0.5 || rayColor.e[1] > 0.5 || rayColor.e[2] > 0.5){
+                        rayColor = multiply(mat.diffuseColor, multiply_scalar(rayColor, 1.8));
+                    }
                     rayColor = multiply(mat.diffuseColor, rayColor);
 
                     color occlusion = ambient_occlusion(hitInfo.hitPoint, hitInfo.normal, sphere_list, nbSpheres, triangle_list, nbTriangles, AO_intensity, mat_list, tex_width, tex_height, quelMatPourTri, sky_mat_list, sky_width, sky_height);
@@ -197,6 +200,7 @@ col_alb_norm tracer(ray r, int nbRebondMax, sphere* sphere_list, int nbSpheres, 
     }
     return can_create(incomingLight, albedo_color, normal_color);
 }
+
 
 void* fill_canva(void *arg) {
     struct ThreadData* data = (struct ThreadData*)arg;
@@ -247,14 +251,14 @@ int main(){
 
     //format du fichier
     double ratio = 16.0 / 10.0;
-    int largeur_image = 1000;
+    int largeur_image = 2880;
     int hauteur_image = (int)(largeur_image / ratio);
 
     //position de la camera
     double vfov = 90; // fov vertical en degrée
     
-    point3 origin = {{4.6278, 10.2571, 0.7523}}; // position de la camera
-    point3 target = {{-3.0709, 10.1227, 0.6918}}; // cible de la camera
+    point3 origin = {{29.4992, 10.5699, 4.8645}}; // position de la camera
+    point3 target = {{19.3467, 9.9876, 3.5496}}; // cible de la camera
     vec3 up = {{0, 1, 0}}; // permet de modifier la rotation selon l'axe z ({{0, 1, 0}} pour horizontal)
 
     double focus_distance = 3; // distance de mise au point (depth of field)
@@ -262,26 +266,26 @@ int main(){
     double ouverture_y = 0.0; // quantité de dof vertical
 
     //qualité et performance
-    int nbRayonParPixel = 50;
-    int nbRebondMax = 10;
+    int nbRayonParPixel = 500;
+    int nbRebondMax = 5;
     
     #define NUM_THREADS 16
 
     bool useDenoiser = true;
 
-    bool useAO = false; // occlusion ambiante, rendu environ 2x plus lent
+    bool useAO = true; // occlusion ambiante, rendu environ 2x plus lent
     double AO_intensity = 2.5; // supérieur à 1 pour augmenter l'intensité
 
     // chemin des fichiers de mesh
-    char* obj_file = "model3D/RTX_MAP/salle_rouge_bleu/salle_rouge_bleu_tri.obj"; // chemin du fichier obj
-    char* mtl_file = "model3D/RTX_MAP/salle_rouge_bleu/salle_rouge_bleu_tri.mtl"; // chemin du fichier mtl (textures dans le format PPM P3)
+    char* obj_file = "model3D/RTX_MAP/global_illumination_ciel_laine/go_ciel_laine_tri.obj"; // chemin du fichier obj
+    char* mtl_file = "model3D/RTX_MAP/global_illumination_ciel_laine/go_ciel_laine_tri.mtl"; // chemin du fichier mtl (textures dans le format PPM P3)
     char* sky_file = "model3D/hdr/MinecraftSkyDay2.ppm";
 
     // nom du fichier de sorties
     char nomFichier[100];
     time_t maintenant = time(NULL); // heure actuelle pour le nom du fichier
     struct tm *temps = localtime(&maintenant);
-    sprintf(nomFichier, "RTX_MC_02_%dRAYS_%dRB_%02d-%02d_%02dh%02d.ppm", nbRayonParPixel, nbRebondMax-1, temps->tm_mday, temps->tm_mon + 1, temps->tm_hour, temps->tm_min);
+    sprintf(nomFichier, "RTX_MC_03_%dRAYS_%dRB_%02d-%02d_%02dh%02d.ppm", nbRayonParPixel, nbRebondMax-1, temps->tm_mday, temps->tm_mon + 1, temps->tm_hour, temps->tm_min);
 
     // position des sphères dans la scène
     // ATTENTION : derniere sphere = ciel
@@ -298,8 +302,8 @@ int main(){
         // {{{0, 501, 0}}, 500, {WHITE, BLACK, 0.0, 0.0}}, // plafond blanc
         // {{{1.7, -0.5, -3.3}}, 0.5, {SKY, BLACK, 0.0, 0.99}}, // boule miroir
         // {{{1.7, -1, -2.2}}, 0.3, {SKY, BLACK, 0.0, 0.85}},
-        {{{-37.6937, 350.0, 127.6528}}, 50, {BLACK, WHITE, 4.0, 0.0}}, // soleil
-        {{{0.0, 0.0, 0.0}}, 1000, {BLACK, SKY, 1.2, 0.0}}, // ciel
+        {{{2.9877, 169.5976, 14.0162}}, 70, {BLACK, WHITE, 6.0, 0.0}}, // soleil
+        {{{0.0, 0.0, 0.0}}, 1000, {BLACK, SKY, 0.1  , 0.0}}, // ciel
         // {{{150.0, 150.0, -300.0}}, 100, {BLACK, WHITE, 2.0, 0.0}}, // soleil
         // {{{-0.3564, 5.0224, -9.5846}}, 2, {{0.125, 0.459, 0.035}, {0.125, 0.459, 0.035}, 1.8, 0.0}},
     };
