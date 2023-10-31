@@ -61,19 +61,18 @@ HitInfo closest_hit(ray r, sphere* sphere_list, int nbSpheres, triangle* triangl
         if (hitInfo.didHit && hitInfo.dst < closestHit.dst){
 
             // cas du ciel
-            // if (i==nbSpheres-1){
-            //     material sky_mat = sphere_uvmapping(s, hitInfo, sky_mat_list, sky_width, sky_height);
-            //     closestHit = hitInfo;
-            //     closestHit.mat = s.mat;
-            //     closestHit.mat.emissionColor = sky_mat.diffuseColor;
-            //     closestHit.mat.alpha = 1.0;
-            // }
-
-            // else{
+            if (i==nbSpheres-1){
+                material sky_mat = sphere_uvmapping(s, hitInfo, sky_mat_list, sky_width, sky_height);
                 closestHit = hitInfo;
                 closestHit.mat = s.mat;
+                closestHit.mat.emissionColor = sky_mat.diffuseColor;
                 closestHit.mat.alpha = 1.0;
-            // } 
+            }
+
+            else{
+                closestHit = hitInfo;
+                closestHit.mat = s.mat;
+            } 
         }
     }
 
@@ -146,7 +145,7 @@ col_alb_norm tracer(ray r, int nbRebondMax, sphere* sphere_list, int nbSpheres, 
         }
         if (hitInfo.didHit){   
             
-            if(mat.alpha > 0.5){
+            if(mat.alpha > -1){
                 // si une lumière
                 if (i==alpha_depth && mat.emissionStrength > 0){
                     // color HSL = rgb_to_hsl(mat.emissionColor);
@@ -160,33 +159,44 @@ col_alb_norm tracer(ray r, int nbRebondMax, sphere* sphere_list, int nbSpheres, 
                 alpha_depth = 0;
 
                 r.origin = hitInfo.hitPoint;
-                vec3 diffuse_dir = vec3_normalize(add(hitInfo.normal,random_dir_no_norm())); // sebastian lague
-                vec3 reflected_dir = reflected_vec(r.dir, hitInfo.normal);
-                r.dir = vec3_lerp(diffuse_dir, reflected_dir, mat.reflectionStrength);
 
-                if (useAO){ // calcul avec occlusion ambiante (notamment augmentation des lumières)
-
-                    color emittedLight = multiply_scalar(mat.emissionColor, mat.emissionStrength * 1.5 * AO_intensity);
-
-                    incomingLight = add(incomingLight,multiply(emittedLight, rayColor));
-                    if(rayColor.e[0] > 0.5 || rayColor.e[1] > 0.5 || rayColor.e[2] > 0.5){ 
-                        rayColor = multiply(mat.diffuseColor, multiply_scalar(rayColor, 1.8)); 
+                if (mat.alpha < 0.99){ // cas de la réfraction
+                    double n1 = 1.0;
+                    double n2 = 1.33;
+                    vec3 normal = hitInfo.normal;
+                    if(vec3_dot(r.dir, hitInfo.normal) > 0){ // on sort de l'objet
+                        normal = vec3_negate(hitInfo.normal);
+                        n1 = 1.33;
+                        n2 = 1.0;
                     }
-                    rayColor = multiply(mat.diffuseColor, rayColor);
 
-                    color occlusion = ambient_occlusion(hitInfo.hitPoint, hitInfo.normal, sphere_list, nbSpheres, triangle_list, nbTriangles, AO_intensity, mat_list, tex_width, tex_height, quelMatPourTri, sky_mat_list, sky_width, sky_height);
-                    rayColor = multiply(rayColor, occlusion);
+                    vec3 refracted_dir = refracted_vec(r.dir, normal, n1, n2);
+                    r.dir = refracted_dir;
                 }
 
-                else{  // calcul sans occlusion ambiante
+                else{
+                    vec3 diffuse_dir = vec3_normalize(add(hitInfo.normal,random_dir_no_norm())); // sebastian lague
+                    vec3 reflected_dir = reflected_vec(r.dir, hitInfo.normal);
+                    r.dir = vec3_lerp(diffuse_dir, reflected_dir, mat.reflectionStrength);
 
-                    color emittedLight = multiply_scalar(mat.emissionColor, mat.emissionStrength);
+                    if (useAO){ // calcul avec occlusion ambiante (notamment augmentation des lumières)
 
-                    incomingLight = add(incomingLight,multiply(emittedLight, rayColor));
-                    if(rayColor.e[0] > 0.5 || rayColor.e[1] > 0.5 || rayColor.e[2] > 0.5){ 
-                        rayColor = multiply(mat.diffuseColor, multiply_scalar(rayColor, 1.8)); 
+                        color emittedLight = multiply_scalar(mat.emissionColor, mat.emissionStrength * 1.5 * AO_intensity);
+
+                        incomingLight = add(incomingLight,multiply(emittedLight, rayColor));
+                        rayColor = multiply(mat.diffuseColor, rayColor);
+
+                        color occlusion = ambient_occlusion(hitInfo.hitPoint, hitInfo.normal, sphere_list, nbSpheres, triangle_list, nbTriangles, AO_intensity, mat_list, tex_width, tex_height, quelMatPourTri, sky_mat_list, sky_width, sky_height);
+                        rayColor = multiply(rayColor, occlusion);
                     }
-                    rayColor = multiply(mat.diffuseColor, rayColor);
+
+                    else{  // calcul sans occlusion ambiante
+
+                        color emittedLight = multiply_scalar(mat.emissionColor, mat.emissionStrength);
+
+                        incomingLight = add(incomingLight,multiply(emittedLight, rayColor));
+                        rayColor = multiply(mat.diffuseColor, rayColor);
+                    }
                 }
             }
             else{
@@ -259,8 +269,8 @@ int main(){
     //position de la camera
     double vfov = 90; // fov vertical en degrée
     
-    point3 origin = {{-0.4864, 0.5463, 1.1366}}; // position de la camera
-    point3 target = {{-0.1139, 0.5368, 0.6716}}; // cible de la camera
+    point3 origin = {{0.2, -0.5, 2}}; // position de la camera
+    point3 target = {{-1, 0.0, -1}}; // cible de la camera
     vec3 up = {{0, 1, 0}}; // permet de modifier la rotation selon l'axe z ({{0, 1, 0}} pour horizontal)
 
     double focus_distance = 3; // distance de mise au point (depth of field)
@@ -268,33 +278,33 @@ int main(){
     double ouverture_y = 0.0; // quantité de dof vertical
 
     //qualité et performance
-    int nbRayonParPixel = 2500;
+    int nbRayonParPixel = 100;
     int nbRebondMax = 5;
     
-    #define NUM_THREADS 16
+    #define NUM_THREADS 12 
 
-    bool useDenoiser = true;
+    bool useDenoiser = false;
 
-    bool useAO = true; // occlusion ambiante, rendu environ 2x plus lent
+    bool useAO = false; // occlusion ambiante, rendu environ 2x plus lent
     double AO_intensity = 2.5; // supérieur à 1 pour augmenter l'intensité
 
     // chemin des fichiers de mesh
-    char* obj_file = "model3D/RTX_MAP/caverne/lave/mineways_tri.obj"; // chemin du fichier obj
-    char* mtl_file = "model3D/RTX_MAP/caverne/lave/mineways_tri.mtl"; // chemin du fichier mtl (textures dans le format PPM P3)
-    char* sky_file = "model3D/hdr/MinecraftSkyDay2.ppm";
+    char* obj_file = "model3D/pyramide/pyramide_tri.obj"; // chemin du fichier obj
+    char* mtl_file = "model3D/pyramide/pyramide_tri.mtl"; // chemin du fichier mtl (textures dans le format PPM P3)
+    char* sky_file = "model3D/hdr/industrial_sunset_puresky.ppm";
 
     // nom du fichier de sorties
     char nomFichier[100];
     time_t maintenant = time(NULL); // heure actuelle pour le nom du fichier
     struct tm *temps = localtime(&maintenant);
-    sprintf(nomFichier, "RTX_cave_lave_%dRAYS_%dRB_%02d-%02d_%02dh%02d.ppm", nbRayonParPixel, nbRebondMax-1, temps->tm_mday, temps->tm_mon + 1, temps->tm_hour, temps->tm_min);
+    sprintf(nomFichier, "refraction_%dRAYS_%dRB_%02d-%02d_%02dh%02d.ppm", nbRayonParPixel, nbRebondMax-1, temps->tm_mday, temps->tm_mon + 1, temps->tm_hour, temps->tm_min);
 
     // position des sphères dans la scène
     // ATTENTION : derniere sphere = ciel
     sphere sphere_list[] = {
-        //{position du centre x, y, z}, rayon, {couleur de l'objet, couleur d'emission, intensité d'emission (> 1), intensité de reflection (entre 0 et 1)}
+        //{position du centre x, y, z}, rayon, {couleur de l'objet, couleur d'emission, intensité d'emission (> 1), intensité de reflection (entre 0 et 1), alpha (entre 0 et 1)}
         // {{{-501,0,0}}, 500, {GREEN, BLACK, 0.0, 0.96}}, // mur vert
-        // {{{0,-501,0}}, 500, {WHITE, BLACK, 0.0, 0.0}}, // sol blanc
+        // {{{0,-501,0}}, 500, {WHITE, BLACK, 0.0, 0.0, 1.0}}, // sol blanc
         // {{{501, 0, 0}}, 500, {RED, BLACK, 0.0, 0.96}}, // mur rouge
         // {{{-0.5, 1.9, -1.2}}, 1.0, {BLACK, {{1.0, 0.6, 0.2}}, 5.0, 0.0}}, // lumiere orange
         // {{{5.5, 6.4, -2.2}}, 5, {BLACK, {{0.7, 0.2, 1.0}}, 5.0, 0.0}}, // lumiere violet
@@ -305,7 +315,8 @@ int main(){
         // {{{1.7, -0.5, -3.3}}, 0.5, {SKY, BLACK, 0.0, 0.99}}, // boule miroir
         // {{{1.7, -1, -2.2}}, 0.3, {SKY, BLACK, 0.0, 0.85}},
         // {{{-37.6937, 350.0, 127.6528}}, 10, {BLACK, WHITE, 100.0, 0.0}}, // soleil
-        // {{{0.0, 0.0, 0.0}}, 1000, {BLACK, SKY, 1.2, 0.0}}, // ciel
+        {{{-1, 0.0, -1}}, 1, {SKY, BLACK, 0.0, 0.0, 0.0}},
+        {{{0.0, 0.0, 0.0}}, 100000, {BLACK, SKY, 1.2, 0.0, 0.0}}, // ciel
         // {{{150.0, 150.0, -300.0}}, 100, {BLACK, WHITE, 2.0, 0.0}}, // soleil
         // {{{-0.3564, 5.0224, -9.5846}}, 2, {{0.125, 0.459, 0.035}, {0.125, 0.459, 0.035}, 1.8, 0.0}},
     };
@@ -327,7 +338,7 @@ int main(){
     // printf("Sommets [%d], mat[%d] : %s\n", quelSommetPourMaterial[0], 0,  mat_path_list[0]);
     // printf("\nMat numero %d pour le triangle %d et c'est le mat %s\n", quelMatPourTri[0], 0, mat_path_list[quelMatPourTri[0]]);
 
-    move_mesh(0, 0, 0, &mesh_list, nbTriangles); // translation (x, y, z) du mesh
+    move_mesh(2, -10, -1, &mesh_list, nbTriangles); // translation (x, y, z) du mesh
     printf("%s : %d textures loaded\n\n", mtl_file, nbMaterials);
 
     // liste de material pour la texture du mesh

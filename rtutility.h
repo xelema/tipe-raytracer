@@ -209,6 +209,24 @@ vec3 reflected_vec(vec3 v, vec3 n){
     return res;
 }
 
+
+vec3 refracted_vec(vec3 v, vec3 normal, double n1, double n2){
+    vec3 dir;
+    
+    double radical = 1 - ((n1/n2)*(n1/n2)) * (1 - (vec3_dot(normal, v)*vec3_dot(normal, v)));
+    if(radical > 0){
+        vec3 comp_tan = multiply_scalar(sub(v, multiply_scalar(normal, vec3_dot(v, normal))), (n1/n2));
+        vec3 comp_normal = multiply_scalar(vec3_negate(normal), sqrt(radical));
+        dir = add(comp_tan, comp_normal);
+    }
+    else{
+        dir = reflected_vec(v, normal);
+    }
+    return dir;
+}
+
+
+
 double randomDouble(double min, double max){
     return min + (max-min)*(rand()/(RAND_MAX + 1.0));
 }

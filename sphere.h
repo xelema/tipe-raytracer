@@ -26,7 +26,7 @@ HitInfo hit_sphere(point3 center, double radius, ray r){
 
     if (discriminant > 0){
         double t1 = (-b - sqrt(discriminant))/(2*a);
-        if (t1 >= 0){
+        if (t1 >= 0.0001){
             hitInfo.didHit = true;
             hitInfo.dst = t1;
             hitInfo.hitPoint = ray_at(r, t1);
@@ -35,7 +35,7 @@ HitInfo hit_sphere(point3 center, double radius, ray r){
         }
 
         double t2 = (-b + sqrt(discriminant))/(2*a);
-        if (t2 >= 0.001){
+        if (t2 >= 0.0001){
             hitInfo.didHit = true;
             hitInfo.dst = t2;
             hitInfo.hitPoint = ray_at(r, t2);
