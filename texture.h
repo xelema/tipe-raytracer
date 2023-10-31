@@ -66,13 +66,70 @@ material tri_uvmapping(triangle tri, HitInfo hitInfo, material* mat_list, int te
     material res;
     res = mat_list[index];
 
-    if (quelMatPourSommet[indice_tri] == 1){
-        res.reflectionStrength =  0.05;
+    if (quelMatPourSommet[indice_tri] == 2){ // lave
+        res.emissionColor = res.diffuseColor;
+        res.emissionStrength = 2.0;
     }
 
-    if (quelMatPourSommet[indice_tri] == 3){
-        res.reflectionStrength =  0.05;
+    if (quelMatPourSommet[indice_tri] == 9){ // redstone
+        if(res.diffuseColor.e[1] < (10.0/255.0) && res.diffuseColor.e[2] < (10.0/255.0)){
+            res.emissionColor = res.diffuseColor;
+            res.emissionStrength = 16.0;
+        }
+        else{
+            res.emissionStrength = 0.0;
+        }
     }
+
+    if (quelMatPourSommet[indice_tri] == 4){ // lapis
+        if(res.diffuseColor.e[0] < (50.0/255.0)){
+            res.emissionColor = res.diffuseColor;
+            res.emissionStrength = 16.0;
+        }
+        else{
+            res.emissionStrength = 0.0;
+        }
+    }
+
+    if (quelMatPourSommet[indice_tri] == 11){ // diams
+        if(res.diffuseColor.e[1] > (210.0/255.0) && res.diffuseColor.e[2] > (210.0/255.0)){
+            res.emissionColor = res.diffuseColor;
+            res.emissionStrength = 18.0;
+        }
+        else{
+            res.emissionStrength = 0.0;
+        }
+    }
+
+    if (quelMatPourSommet[indice_tri] == 6){ // emeraude
+        if((res.diffuseColor.e[1]>(210.0/255.0)) || (res.diffuseColor.e[0]<(1.0/255.0) && res.diffuseColor.e[1]>(115.0/255.0))){
+            res.emissionColor = res.diffuseColor;
+            res.emissionStrength = 16.0;
+        }
+        else{
+            res.emissionStrength = 0.0;
+        }
+    }
+
+    if (quelMatPourSommet[indice_tri] == 3){ // or
+        if(res.diffuseColor.e[0] > (200.0/255.0)){
+            res.reflectionStrength = 0.10;
+        }
+        else{
+            res.reflectionStrength = 0.0;
+        }
+    }
+
+    if (quelMatPourSommet[indice_tri] == 5){ // fer
+        if(res.diffuseColor.e[0] > (200.0/255.0)){
+            res.reflectionStrength = 0.20;
+        }
+        else{
+            res.reflectionStrength = 0.0;
+        }
+    }
+
+
 
 
     // if (quelMatPourSommet[indice_tri] == 2 || quelMatPourSommet[indice_tri] == 12 || quelMatPourSommet[indice_tri] == 25){

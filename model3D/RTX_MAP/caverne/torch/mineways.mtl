@@ -1,0 +1,174 @@
+Wavefront OBJ material file
+# Contains 13 materials
+
+newmtl stone
+Ns 0
+Ka 0.2 0.2 0.2
+Kd 1 1 1
+Ks 0 0 0
+map_Ka tex/stone.png
+# for G3D, to make textures look blocky:
+interpolateMode NEAREST_MAGNIFICATION_TRILINEAR_MIPMAP_MINIFICATION
+map_Kd tex/stone.png
+illum 2
+# d 1
+# Tr 0
+
+newmtl dirt
+Ns 0
+Ka 0.2 0.2 0.2
+Kd 1 1 1
+Ks 0 0 0
+map_Ka tex/dirt.png
+# for G3D, to make textures look blocky:
+interpolateMode NEAREST_MAGNIFICATION_TRILINEAR_MIPMAP_MINIFICATION
+map_Kd tex/dirt.png
+illum 2
+# d 1
+# Tr 0
+
+newmtl gravel
+Ns 0
+Ka 0.2 0.2 0.2
+Kd 1 1 1
+Ks 0 0 0
+map_Ka tex/gravel.png
+# for G3D, to make textures look blocky:
+interpolateMode NEAREST_MAGNIFICATION_TRILINEAR_MIPMAP_MINIFICATION
+map_Kd tex/gravel.png
+illum 2
+# d 1
+# Tr 0
+
+newmtl gold_ore
+Ns 0
+Ka 0.2 0.2 0.2
+Kd 1 1 1
+Ks 0 0 0
+map_Ka tex/gold_ore.png
+# for G3D, to make textures look blocky:
+interpolateMode NEAREST_MAGNIFICATION_TRILINEAR_MIPMAP_MINIFICATION
+map_Kd tex/gold_ore.png
+illum 2
+# d 1
+# Tr 0
+
+newmtl iron_ore
+Ns 0
+Ka 0.2 0.2 0.2
+Kd 1 1 1
+Ks 0 0 0
+map_Ka tex/iron_ore.png
+# for G3D, to make textures look blocky:
+interpolateMode NEAREST_MAGNIFICATION_TRILINEAR_MIPMAP_MINIFICATION
+map_Kd tex/iron_ore.png
+illum 2
+# d 1
+# Tr 0
+
+newmtl coal_ore
+Ns 0
+Ka 0.2 0.2 0.2
+Kd 1 1 1
+Ks 0 0 0
+map_Ka tex/coal_ore.png
+# for G3D, to make textures look blocky:
+interpolateMode NEAREST_MAGNIFICATION_TRILINEAR_MIPMAP_MINIFICATION
+map_Kd tex/coal_ore.png
+illum 2
+# d 1
+# Tr 0
+
+newmtl diamond_ore
+Ns 0
+Ka 0.2 0.2 0.2
+Kd 1 1 1
+Ks 0 0 0
+map_Ka tex/diamond_ore.png
+# for G3D, to make textures look blocky:
+interpolateMode NEAREST_MAGNIFICATION_TRILINEAR_MIPMAP_MINIFICATION
+map_Kd tex/diamond_ore.png
+illum 2
+# d 1
+# Tr 0
+
+newmtl redstone_ore
+Ns 0
+Ka 0.2 0.2 0.2
+Kd 1 1 1
+Ks 0 0 0
+map_Ka tex/redstone_ore.png
+# for G3D, to make textures look blocky:
+interpolateMode NEAREST_MAGNIFICATION_TRILINEAR_MIPMAP_MINIFICATION
+map_Kd tex/redstone_ore.png
+illum 2
+# d 1
+# Tr 0
+
+newmtl torch
+Ns 0
+Ka 0.2 0.2 0.2
+Kd 1 1 1
+Ks 0 0 0
+Ke 0.901686 0.901686 0.901686
+map_Ka tex/torch.png
+# for G3D, to make textures look blocky:
+interpolateMode NEAREST_MAGNIFICATION_TRILINEAR_MIPMAP_MINIFICATION
+map_Kd tex/torch.png
+map_d tex/torch.png
+map_Ke tex/torch.png
+illum 2
+# d 1
+# Tr 0
+
+newmtl lapis_ore
+Ns 0
+Ka 0.2 0.2 0.2
+Kd 1 1 1
+Ks 0 0 0
+map_Ka tex/lapis_ore.png
+# for G3D, to make textures look blocky:
+interpolateMode NEAREST_MAGNIFICATION_TRILINEAR_MIPMAP_MINIFICATION
+map_Kd tex/lapis_ore.png
+illum 2
+# d 1
+# Tr 0
+
+newmtl andesite
+Ns 0
+Ka 0.2 0.2 0.2
+Kd 1 1 1
+Ks 0 0 0
+map_Ka tex/andesite.png
+# for G3D, to make textures look blocky:
+interpolateMode NEAREST_MAGNIFICATION_TRILINEAR_MIPMAP_MINIFICATION
+map_Kd tex/andesite.png
+illum 2
+# d 1
+# Tr 0
+
+newmtl diorite
+Ns 0
+Ka 0.2 0.2 0.2
+Kd 1 1 1
+Ks 0 0 0
+map_Ka tex/diorite.png
+# for G3D, to make textures look blocky:
+interpolateMode NEAREST_MAGNIFICATION_TRILINEAR_MIPMAP_MINIFICATION
+map_Kd tex/diorite.png
+illum 2
+# d 1
+# Tr 0
+
+newmtl granite
+Ns 0
+Ka 0.2 0.2 0.2
+Kd 1 1 1
+Ks 0 0 0
+map_Ka tex/granite.png
+# for G3D, to make textures look blocky:
+interpolateMode NEAREST_MAGNIFICATION_TRILINEAR_MIPMAP_MINIFICATION
+map_Kd tex/granite.png
+illum 2
+# d 1
+# Tr 0

@@ -1,0 +1,516 @@
+Wavefront OBJ material file
+# Contains 38 materials
+
+newmtl grass_block_top
+Ns 0
+Ka 0.2 0.2 0.2
+Kd 1 1 1
+Ks 0 0 0
+map_Ka tex/grass_block_top_y.png
+# for G3D, to make textures look blocky:
+interpolateMode NEAREST_MAGNIFICATION_TRILINEAR_MIPMAP_MINIFICATION
+map_Kd tex/grass_block_top_y.png
+illum 2
+# d 1
+# Tr 0
+
+newmtl stone
+Ns 0
+Ka 0.2 0.2 0.2
+Kd 1 1 1
+Ks 0 0 0
+map_Ka tex/stone.png
+# for G3D, to make textures look blocky:
+interpolateMode NEAREST_MAGNIFICATION_TRILINEAR_MIPMAP_MINIFICATION
+map_Kd tex/stone.png
+illum 2
+# d 1
+# Tr 0
+
+newmtl dirt
+Ns 0
+Ka 0.2 0.2 0.2
+Kd 1 1 1
+Ks 0 0 0
+map_Ka tex/dirt.png
+# for G3D, to make textures look blocky:
+interpolateMode NEAREST_MAGNIFICATION_TRILINEAR_MIPMAP_MINIFICATION
+map_Kd tex/dirt.png
+illum 2
+# d 1
+# Tr 0
+
+newmtl grass_block_side
+Ns 0
+Ka 0.2 0.2 0.2
+Kd 1 1 1
+Ks 0 0 0
+map_Ka tex/grass_block_side_y.png
+# for G3D, to make textures look blocky:
+interpolateMode NEAREST_MAGNIFICATION_TRILINEAR_MIPMAP_MINIFICATION
+map_Kd tex/grass_block_side_y.png
+illum 2
+# d 1
+# Tr 0
+
+newmtl poppy
+Ns 0
+Ka 0.2 0.2 0.2
+Kd 1 1 1
+Ks 0 0 0
+map_Ka tex/poppy.png
+# for G3D, to make textures look blocky:
+interpolateMode NEAREST_MAGNIFICATION_TRILINEAR_MIPMAP_MINIFICATION
+map_Kd tex/poppy.png
+map_d tex/poppy.png
+illum 2
+# d 1
+# Tr 0
+
+newmtl dandelion
+Ns 0
+Ka 0.2 0.2 0.2
+Kd 1 1 1
+Ks 0 0 0
+map_Ka tex/dandelion.png
+# for G3D, to make textures look blocky:
+interpolateMode NEAREST_MAGNIFICATION_TRILINEAR_MIPMAP_MINIFICATION
+map_Kd tex/dandelion.png
+map_d tex/dandelion.png
+illum 2
+# d 1
+# Tr 0
+
+newmtl sand
+Ns 0
+Ka 0.2 0.2 0.2
+Kd 1 1 1
+Ks 0 0 0
+map_Ka tex/sand.png
+# for G3D, to make textures look blocky:
+interpolateMode NEAREST_MAGNIFICATION_TRILINEAR_MIPMAP_MINIFICATION
+map_Kd tex/sand.png
+illum 2
+# d 1
+# Tr 0
+
+newmtl gravel
+Ns 0
+Ka 0.2 0.2 0.2
+Kd 1 1 1
+Ks 0 0 0
+map_Ka tex/gravel.png
+# for G3D, to make textures look blocky:
+interpolateMode NEAREST_MAGNIFICATION_TRILINEAR_MIPMAP_MINIFICATION
+map_Kd tex/gravel.png
+illum 2
+# d 1
+# Tr 0
+
+newmtl oak_log
+Ns 0
+Ka 0.2 0.2 0.2
+Kd 1 1 1
+Ks 0 0 0
+map_Ka tex/oak_log.png
+# for G3D, to make textures look blocky:
+interpolateMode NEAREST_MAGNIFICATION_TRILINEAR_MIPMAP_MINIFICATION
+map_Kd tex/oak_log.png
+illum 2
+# d 1
+# Tr 0
+
+newmtl oak_log_top
+Ns 0
+Ka 0.2 0.2 0.2
+Kd 1 1 1
+Ks 0 0 0
+map_Ka tex/oak_log_top.png
+# for G3D, to make textures look blocky:
+interpolateMode NEAREST_MAGNIFICATION_TRILINEAR_MIPMAP_MINIFICATION
+map_Kd tex/oak_log_top.png
+illum 2
+# d 1
+# Tr 0
+
+newmtl iron_ore
+Ns 0
+Ka 0.2 0.2 0.2
+Kd 1 1 1
+Ks 0 0 0
+map_Ka tex/iron_ore.png
+# for G3D, to make textures look blocky:
+interpolateMode NEAREST_MAGNIFICATION_TRILINEAR_MIPMAP_MINIFICATION
+map_Kd tex/iron_ore.png
+illum 2
+# d 1
+# Tr 0
+
+newmtl coal_ore
+Ns 0
+Ka 0.2 0.2 0.2
+Kd 1 1 1
+Ks 0 0 0
+map_Ka tex/coal_ore.png
+# for G3D, to make textures look blocky:
+interpolateMode NEAREST_MAGNIFICATION_TRILINEAR_MIPMAP_MINIFICATION
+map_Kd tex/coal_ore.png
+illum 2
+# d 1
+# Tr 0
+
+newmtl grass
+Ns 0
+Ka 0.2 0.2 0.2
+Kd 1 1 1
+Ks 0 0 0
+map_Ka tex/grass_y.png
+# for G3D, to make textures look blocky:
+interpolateMode NEAREST_MAGNIFICATION_TRILINEAR_MIPMAP_MINIFICATION
+map_Kd tex/grass_y.png
+map_d tex/grass_y.png
+illum 2
+# d 1
+# Tr 0
+
+newmtl oak_leaves
+Ns 0
+Ka 0.2 0.2 0.2
+Kd 1 1 1
+Ks 0 0 0
+map_Ka tex/oak_leaves_y.png
+# for G3D, to make textures look blocky:
+interpolateMode NEAREST_MAGNIFICATION_TRILINEAR_MIPMAP_MINIFICATION
+map_Kd tex/oak_leaves_y.png
+map_d tex/oak_leaves_y.png
+illum 2
+# d 1
+# Tr 0
+
+newmtl sugar_cane
+Ns 0
+Ka 0.2 0.2 0.2
+Kd 1 1 1
+Ks 0 0 0
+map_Ka tex/sugar_cane.png
+# for G3D, to make textures look blocky:
+interpolateMode NEAREST_MAGNIFICATION_TRILINEAR_MIPMAP_MINIFICATION
+map_Kd tex/sugar_cane.png
+map_d tex/sugar_cane.png
+illum 2
+# d 1
+# Tr 0
+
+newmtl birch_log
+Ns 0
+Ka 0.2 0.2 0.2
+Kd 1 1 1
+Ks 0 0 0
+map_Ka tex/birch_log.png
+# for G3D, to make textures look blocky:
+interpolateMode NEAREST_MAGNIFICATION_TRILINEAR_MIPMAP_MINIFICATION
+map_Kd tex/birch_log.png
+illum 2
+# d 1
+# Tr 0
+
+newmtl brown_mushroom_block
+Ns 0
+Ka 0.2 0.2 0.2
+Kd 1 1 1
+Ks 0 0 0
+map_Ka tex/brown_mushroom_block.png
+# for G3D, to make textures look blocky:
+interpolateMode NEAREST_MAGNIFICATION_TRILINEAR_MIPMAP_MINIFICATION
+map_Kd tex/brown_mushroom_block.png
+illum 2
+# d 1
+# Tr 0
+
+newmtl mushroom_block_inside
+Ns 0
+Ka 0.2 0.2 0.2
+Kd 1 1 1
+Ks 0 0 0
+map_Ka tex/mushroom_block_inside.png
+# for G3D, to make textures look blocky:
+interpolateMode NEAREST_MAGNIFICATION_TRILINEAR_MIPMAP_MINIFICATION
+map_Kd tex/mushroom_block_inside.png
+illum 2
+# d 1
+# Tr 0
+
+newmtl birch_log_top
+Ns 0
+Ka 0.2 0.2 0.2
+Kd 1 1 1
+Ks 0 0 0
+map_Ka tex/birch_log_top.png
+# for G3D, to make textures look blocky:
+interpolateMode NEAREST_MAGNIFICATION_TRILINEAR_MIPMAP_MINIFICATION
+map_Kd tex/birch_log_top.png
+illum 2
+# d 1
+# Tr 0
+
+newmtl birch_leaves
+Ns 0
+Ka 0.2 0.2 0.2
+Kd 1 1 1
+Ks 0 0 0
+map_Ka tex/birch_leaves_y.png
+# for G3D, to make textures look blocky:
+interpolateMode NEAREST_MAGNIFICATION_TRILINEAR_MIPMAP_MINIFICATION
+map_Kd tex/birch_leaves_y.png
+map_d tex/birch_leaves_y.png
+illum 2
+# d 1
+# Tr 0
+
+newmtl water_still
+Ns 216.75
+Ka 0.2 0.2 0.2
+Kd 1 1 1
+Ks 0.03 0.03 0.03
+map_Ka tex/water_still_y.png
+# for G3D, to make textures look blocky:
+interpolateMode NEAREST_MAGNIFICATION_TRILINEAR_MIPMAP_MINIFICATION
+map_Kd tex/water_still_y.png
+map_d tex/water_still_y.png
+illum 4
+# d 0.535
+# Tr 0.465
+Tf 0.465 0.465 0.465
+
+newmtl tall_grass_bottom
+Ns 0
+Ka 0.2 0.2 0.2
+Kd 1 1 1
+Ks 0 0 0
+map_Ka tex/tall_grass_bottom_y.png
+# for G3D, to make textures look blocky:
+interpolateMode NEAREST_MAGNIFICATION_TRILINEAR_MIPMAP_MINIFICATION
+map_Kd tex/tall_grass_bottom_y.png
+map_d tex/tall_grass_bottom_y.png
+illum 2
+# d 1
+# Tr 0
+
+newmtl tall_grass_top
+Ns 0
+Ka 0.2 0.2 0.2
+Kd 1 1 1
+Ks 0 0 0
+map_Ka tex/tall_grass_top_y.png
+# for G3D, to make textures look blocky:
+interpolateMode NEAREST_MAGNIFICATION_TRILINEAR_MIPMAP_MINIFICATION
+map_Kd tex/tall_grass_top_y.png
+map_d tex/tall_grass_top_y.png
+illum 2
+# d 1
+# Tr 0
+
+newmtl peony_bottom
+Ns 0
+Ka 0.2 0.2 0.2
+Kd 1 1 1
+Ks 0 0 0
+map_Ka tex/peony_bottom.png
+# for G3D, to make textures look blocky:
+interpolateMode NEAREST_MAGNIFICATION_TRILINEAR_MIPMAP_MINIFICATION
+map_Kd tex/peony_bottom.png
+map_d tex/peony_bottom.png
+illum 2
+# d 1
+# Tr 0
+
+newmtl peony_top
+Ns 0
+Ka 0.2 0.2 0.2
+Kd 1 1 1
+Ks 0 0 0
+map_Ka tex/peony_top.png
+# for G3D, to make textures look blocky:
+interpolateMode NEAREST_MAGNIFICATION_TRILINEAR_MIPMAP_MINIFICATION
+map_Kd tex/peony_top.png
+map_d tex/peony_top.png
+illum 2
+# d 1
+# Tr 0
+
+newmtl red_tulip
+Ns 0
+Ka 0.2 0.2 0.2
+Kd 1 1 1
+Ks 0 0 0
+map_Ka tex/red_tulip.png
+# for G3D, to make textures look blocky:
+interpolateMode NEAREST_MAGNIFICATION_TRILINEAR_MIPMAP_MINIFICATION
+map_Kd tex/red_tulip.png
+map_d tex/red_tulip.png
+illum 2
+# d 1
+# Tr 0
+
+newmtl orange_tulip
+Ns 0
+Ka 0.2 0.2 0.2
+Kd 1 1 1
+Ks 0 0 0
+map_Ka tex/orange_tulip.png
+# for G3D, to make textures look blocky:
+interpolateMode NEAREST_MAGNIFICATION_TRILINEAR_MIPMAP_MINIFICATION
+map_Kd tex/orange_tulip.png
+map_d tex/orange_tulip.png
+illum 2
+# d 1
+# Tr 0
+
+newmtl white_tulip
+Ns 0
+Ka 0.2 0.2 0.2
+Kd 1 1 1
+Ks 0 0 0
+map_Ka tex/white_tulip.png
+# for G3D, to make textures look blocky:
+interpolateMode NEAREST_MAGNIFICATION_TRILINEAR_MIPMAP_MINIFICATION
+map_Kd tex/white_tulip.png
+map_d tex/white_tulip.png
+illum 2
+# d 1
+# Tr 0
+
+newmtl pink_tulip
+Ns 0
+Ka 0.2 0.2 0.2
+Kd 1 1 1
+Ks 0 0 0
+map_Ka tex/pink_tulip.png
+# for G3D, to make textures look blocky:
+interpolateMode NEAREST_MAGNIFICATION_TRILINEAR_MIPMAP_MINIFICATION
+map_Kd tex/pink_tulip.png
+map_d tex/pink_tulip.png
+illum 2
+# d 1
+# Tr 0
+
+newmtl oxeye_daisy
+Ns 0
+Ka 0.2 0.2 0.2
+Kd 1 1 1
+Ks 0 0 0
+map_Ka tex/oxeye_daisy.png
+# for G3D, to make textures look blocky:
+interpolateMode NEAREST_MAGNIFICATION_TRILINEAR_MIPMAP_MINIFICATION
+map_Kd tex/oxeye_daisy.png
+map_d tex/oxeye_daisy.png
+illum 2
+# d 1
+# Tr 0
+
+newmtl dark_oak_leaves
+Ns 0
+Ka 0.2 0.2 0.2
+Kd 1 1 1
+Ks 0 0 0
+map_Ka tex/dark_oak_leaves_y.png
+# for G3D, to make textures look blocky:
+interpolateMode NEAREST_MAGNIFICATION_TRILINEAR_MIPMAP_MINIFICATION
+map_Kd tex/dark_oak_leaves_y.png
+map_d tex/dark_oak_leaves_y.png
+illum 2
+# d 1
+# Tr 0
+
+newmtl dark_oak_log
+Ns 0
+Ka 0.2 0.2 0.2
+Kd 1 1 1
+Ks 0 0 0
+map_Ka tex/dark_oak_log.png
+# for G3D, to make textures look blocky:
+interpolateMode NEAREST_MAGNIFICATION_TRILINEAR_MIPMAP_MINIFICATION
+map_Kd tex/dark_oak_log.png
+illum 2
+# d 1
+# Tr 0
+
+newmtl dark_oak_log_top
+Ns 0
+Ka 0.2 0.2 0.2
+Kd 1 1 1
+Ks 0 0 0
+map_Ka tex/dark_oak_log_top.png
+# for G3D, to make textures look blocky:
+interpolateMode NEAREST_MAGNIFICATION_TRILINEAR_MIPMAP_MINIFICATION
+map_Kd tex/dark_oak_log_top.png
+illum 2
+# d 1
+# Tr 0
+
+newmtl andesite
+Ns 0
+Ka 0.2 0.2 0.2
+Kd 1 1 1
+Ks 0 0 0
+map_Ka tex/andesite.png
+# for G3D, to make textures look blocky:
+interpolateMode NEAREST_MAGNIFICATION_TRILINEAR_MIPMAP_MINIFICATION
+map_Kd tex/andesite.png
+illum 2
+# d 1
+# Tr 0
+
+newmtl diorite
+Ns 0
+Ka 0.2 0.2 0.2
+Kd 1 1 1
+Ks 0 0 0
+map_Ka tex/diorite.png
+# for G3D, to make textures look blocky:
+interpolateMode NEAREST_MAGNIFICATION_TRILINEAR_MIPMAP_MINIFICATION
+map_Kd tex/diorite.png
+illum 2
+# d 1
+# Tr 0
+
+newmtl granite
+Ns 0
+Ka 0.2 0.2 0.2
+Kd 1 1 1
+Ks 0 0 0
+map_Ka tex/granite.png
+# for G3D, to make textures look blocky:
+interpolateMode NEAREST_MAGNIFICATION_TRILINEAR_MIPMAP_MINIFICATION
+map_Kd tex/granite.png
+illum 2
+# d 1
+# Tr 0
+
+newmtl cornflower
+Ns 0
+Ka 0.2 0.2 0.2
+Kd 1 1 1
+Ks 0 0 0
+map_Ka tex/cornflower.png
+# for G3D, to make textures look blocky:
+interpolateMode NEAREST_MAGNIFICATION_TRILINEAR_MIPMAP_MINIFICATION
+map_Kd tex/cornflower.png
+map_d tex/cornflower.png
+illum 2
+# d 1
+# Tr 0
+
+newmtl lily_of_the_valley
+Ns 0
+Ka 0.2 0.2 0.2
+Kd 1 1 1
+Ks 0 0 0
+map_Ka tex/lily_of_the_valley.png
+# for G3D, to make textures look blocky:
+interpolateMode NEAREST_MAGNIFICATION_TRILINEAR_MIPMAP_MINIFICATION
+map_Kd tex/lily_of_the_valley.png
+map_d tex/lily_of_the_valley.png
+illum 2
+# d 1
+# Tr 0

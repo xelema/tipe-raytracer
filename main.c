@@ -61,19 +61,19 @@ HitInfo closest_hit(ray r, sphere* sphere_list, int nbSpheres, triangle* triangl
         if (hitInfo.didHit && hitInfo.dst < closestHit.dst){
 
             // cas du ciel
-            if (i==nbSpheres-1){
-                material sky_mat = sphere_uvmapping(s, hitInfo, sky_mat_list, sky_width, sky_height);
-                closestHit = hitInfo;
-                closestHit.mat = s.mat;
-                closestHit.mat.emissionColor = sky_mat.diffuseColor;
-                closestHit.mat.alpha = 1.0;
-            }
+            // if (i==nbSpheres-1){
+            //     material sky_mat = sphere_uvmapping(s, hitInfo, sky_mat_list, sky_width, sky_height);
+            //     closestHit = hitInfo;
+            //     closestHit.mat = s.mat;
+            //     closestHit.mat.emissionColor = sky_mat.diffuseColor;
+            //     closestHit.mat.alpha = 1.0;
+            // }
 
-            else{
+            // else{
                 closestHit = hitInfo;
                 closestHit.mat = s.mat;
                 closestHit.mat.alpha = 1.0;
-            } 
+            // } 
         }
     }
 
@@ -149,11 +149,11 @@ col_alb_norm tracer(ray r, int nbRebondMax, sphere* sphere_list, int nbSpheres, 
             if(mat.alpha > 0.5){
                 // si une lumière
                 if (i==alpha_depth && mat.emissionStrength > 0){
-                    color HSL = rgb_to_hsl(mat.emissionColor);
-                    HSL.e[2] *= 1.0; // luminosité (valeurs subjectives)
-                    HSL.e[1] *= 1.0; // saturation (valeurs subjectives)
-                    color newCol = hsl_to_rgb(HSL);
-                    return can_create(newCol, newCol, hitInfo.normal);
+                    // color HSL = rgb_to_hsl(mat.emissionColor);
+                    // HSL.e[2] *= 1.0; // luminosité (valeurs subjectives)
+                    // HSL.e[1] *= 1.0; // saturation (valeurs subjectives)
+                    // color newCol = hsl_to_rgb(HSL);
+                    return can_create(mat.emissionColor, mat.emissionColor, hitInfo.normal);
                 }
                 
                 is_alpha = false;
@@ -259,8 +259,8 @@ int main(){
     //position de la camera
     double vfov = 90; // fov vertical en degrée
     
-    point3 origin = {{-37.6937, 96.4315, 127.6528}}; // position de la camera
-    point3 target = {{-32.8597, 99.3826, 116.8967}}; // cible de la camera
+    point3 origin = {{-0.4864, 0.5463, 1.1366}}; // position de la camera
+    point3 target = {{-0.1139, 0.5368, 0.6716}}; // cible de la camera
     vec3 up = {{0, 1, 0}}; // permet de modifier la rotation selon l'axe z ({{0, 1, 0}} pour horizontal)
 
     double focus_distance = 3; // distance de mise au point (depth of field)
@@ -268,7 +268,7 @@ int main(){
     double ouverture_y = 0.0; // quantité de dof vertical
 
     //qualité et performance
-    int nbRayonParPixel = 10000;
+    int nbRayonParPixel = 2500;
     int nbRebondMax = 5;
     
     #define NUM_THREADS 16
@@ -279,15 +279,15 @@ int main(){
     double AO_intensity = 2.5; // supérieur à 1 pour augmenter l'intensité
 
     // chemin des fichiers de mesh
-    char* obj_file = "model3D/RTX_MAP/ciel_bande_orange/ciel_bande_orange_tri_less.obj"; // chemin du fichier obj
-    char* mtl_file = "model3D/RTX_MAP/ciel_bande_orange/ciel_bande_orange_tri_less.mtl"; // chemin du fichier mtl (textures dans le format PPM P3)
+    char* obj_file = "model3D/RTX_MAP/caverne/lave/mineways_tri.obj"; // chemin du fichier obj
+    char* mtl_file = "model3D/RTX_MAP/caverne/lave/mineways_tri.mtl"; // chemin du fichier mtl (textures dans le format PPM P3)
     char* sky_file = "model3D/hdr/MinecraftSkyDay2.ppm";
 
     // nom du fichier de sorties
     char nomFichier[100];
     time_t maintenant = time(NULL); // heure actuelle pour le nom du fichier
     struct tm *temps = localtime(&maintenant);
-    sprintf(nomFichier, "RTX_MC_01_%dRAYS_%dRB_%02d-%02d_%02dh%02d.ppm", nbRayonParPixel, nbRebondMax-1, temps->tm_mday, temps->tm_mon + 1, temps->tm_hour, temps->tm_min);
+    sprintf(nomFichier, "RTX_cave_lave_%dRAYS_%dRB_%02d-%02d_%02dh%02d.ppm", nbRayonParPixel, nbRebondMax-1, temps->tm_mday, temps->tm_mon + 1, temps->tm_hour, temps->tm_min);
 
     // position des sphères dans la scène
     // ATTENTION : derniere sphere = ciel
@@ -304,8 +304,8 @@ int main(){
         // {{{0, 501, 0}}, 500, {WHITE, BLACK, 0.0, 0.0}}, // plafond blanc
         // {{{1.7, -0.5, -3.3}}, 0.5, {SKY, BLACK, 0.0, 0.99}}, // boule miroir
         // {{{1.7, -1, -2.2}}, 0.3, {SKY, BLACK, 0.0, 0.85}},
-        {{{-37.6937, 350.0, 127.6528}}, 10, {BLACK, WHITE, 100.0, 0.0}}, // soleil
-        {{{0.0, 0.0, 0.0}}, 1000, {BLACK, SKY, 1.2, 0.0}}, // ciel
+        // {{{-37.6937, 350.0, 127.6528}}, 10, {BLACK, WHITE, 100.0, 0.0}}, // soleil
+        // {{{0.0, 0.0, 0.0}}, 1000, {BLACK, SKY, 1.2, 0.0}}, // ciel
         // {{{150.0, 150.0, -300.0}}, 100, {BLACK, WHITE, 2.0, 0.0}}, // soleil
         // {{{-0.3564, 5.0224, -9.5846}}, 2, {{0.125, 0.459, 0.035}, {0.125, 0.459, 0.035}, 1.8, 0.0}},
     };
