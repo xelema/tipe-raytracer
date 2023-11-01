@@ -116,13 +116,11 @@ color ambient_occlusion(vec3 point, vec3 normal, sphere* sphere_list, int nbSphe
 
 col_alb_norm tracer(ray r, int nbRebondMax, sphere* sphere_list, int nbSpheres, triangle* triangle_list, int nbTriangles, double AO_intensity, bool useAO, material* mat_list, int tex_width, int tex_height, int* quelMatPourTri, material* sky_mat_list, int sky_width, int sky_height) {
 
-    // pas une lumière
     color incomingLight = BLACK;
     color rayColor = WHITE;
     color albedo_color = BLACK; // denoiser
     color normal_color = BLACK; // denoiser
-    color alpha_albedo_color = WHITE;
-    color alpha_color = WHITE;
+    color alpha_color = WHITE; // denoiser
     bool is_alpha = false; // denoiser
     int alpha_depth = 0;
 
@@ -135,84 +133,94 @@ col_alb_norm tracer(ray r, int nbRebondMax, sphere* sphere_list, int nbSpheres, 
             albedo_color = mat.diffuseColor;
             normal_color = hitInfo.normal;
         }
+
         if (i == alpha_depth && is_alpha){ // denoiser cas alpha (trou dans la texture)
+
             albedo_color = mat.diffuseColor;
             if(mat.emissionStrength > 0){
                 albedo_color = mat.emissionColor;
             }
             normal_color = hitInfo.normal;
-            
+            is_alpha = false;
         }
+
         if (hitInfo.didHit){   
-            
-            if(mat.alpha > -1){
-                // si une lumière
-                if (i==alpha_depth && mat.emissionStrength > 0){
-                    // color HSL = rgb_to_hsl(mat.emissionColor);
-                    // HSL.e[2] *= 1.0; // luminosité (valeurs subjectives)
-                    // HSL.e[1] *= 1.0; // saturation (valeurs subjectives)
-                    // color newCol = hsl_to_rgb(HSL);
-                    return can_create(mat.emissionColor, mat.emissionColor, hitInfo.normal);
-                }
+
+            if (i==alpha_depth && mat.emissionStrength > 0){ // si une lumière
+                color HSL = rgb_to_hsl(mat.emissionColor);
+                HSL.e[2] *= 1.0; // luminosité (valeurs subjectives)
+                HSL.e[1] *= 1.0; // saturation (valeurs subjectives)
+                color newCol = hsl_to_rgb(HSL);
+                return can_create(newCol, newCol, hitInfo.normal);
+            }
                 
-                is_alpha = false;
-                alpha_depth = 0;
+            r.origin = hitInfo.hitPoint;
+            vec3 diffuse_dir = vec3_normalize(add(hitInfo.normal,random_dir_no_norm())); // cosine distribution (sebastian lague)
+            vec3 reflected_dir = reflected_vec(r.dir, hitInfo.normal);
+            vec3 diff_ref_dir = vec3_lerp(diffuse_dir, reflected_dir, mat.reflectionStrength);
 
-                r.origin = hitInfo.hitPoint;
+            if (mat.alpha <= 0.99 && mat.alpha >= 0.0001){ // cas de la réfraction   
+                double n1 = 1.0;
+                double n2 = mat.materialIndex;
+                vec3 normal = hitInfo.normal;
 
-                if (mat.alpha < 0.99){ // cas de la réfraction
-                    double n1 = 1.0;
-                    double n2 = 1.33;
-                    vec3 normal = hitInfo.normal;
-                    if(vec3_dot(r.dir, hitInfo.normal) > 0){ // on sort de l'objet
-                        normal = vec3_negate(hitInfo.normal);
-                        n1 = 1.33;
-                        n2 = 1.0;
-                    }
-
-                    vec3 refracted_dir = refracted_vec(r.dir, normal, n1, n2);
-                    r.dir = refracted_dir;
+                if(vec3_dot(r.dir, hitInfo.normal) > 0){ // on sort de l'objet
+                    normal = vec3_negate(hitInfo.normal);
+                    n1 = mat.materialIndex;
+                    n2 = 1.0;
                 }
 
+                vec3 refracted_dir = refracted_vec(r.dir, normal, n1, n2);
+                
+                double rnd = randomDouble(0, 1); // parfois réflection, parfois réfraction (en fonction de la valeur d'alpha)
+                if(rnd > mat.alpha){
+                    r.dir = refracted_dir;
+                    continue;
+                }
                 else{
-                    vec3 diffuse_dir = vec3_normalize(add(hitInfo.normal,random_dir_no_norm())); // sebastian lague
-                    vec3 reflected_dir = reflected_vec(r.dir, hitInfo.normal);
-                    r.dir = vec3_lerp(diffuse_dir, reflected_dir, mat.reflectionStrength);
-
-                    if (useAO){ // calcul avec occlusion ambiante (notamment augmentation des lumières)
-
-                        color emittedLight = multiply_scalar(mat.emissionColor, mat.emissionStrength * 1.5 * AO_intensity);
-
-                        incomingLight = add(incomingLight,multiply(emittedLight, rayColor));
-                        rayColor = multiply(mat.diffuseColor, rayColor);
-
-                        color occlusion = ambient_occlusion(hitInfo.hitPoint, hitInfo.normal, sphere_list, nbSpheres, triangle_list, nbTriangles, AO_intensity, mat_list, tex_width, tex_height, quelMatPourTri, sky_mat_list, sky_width, sky_height);
-                        rayColor = multiply(rayColor, occlusion);
-                    }
-
-                    else{  // calcul sans occlusion ambiante
-
-                        color emittedLight = multiply_scalar(mat.emissionColor, mat.emissionStrength);
-
-                        incomingLight = add(incomingLight,multiply(emittedLight, rayColor));
-                        rayColor = multiply(mat.diffuseColor, rayColor);
-                    }
+                    r.dir = diff_ref_dir;
                 }
             }
-            else{
-                alpha_albedo_color = mat.diffuseColor;
+
+            if (mat.alpha > 0.99){
+                is_alpha = false;
+                r.dir = diff_ref_dir;
+            }
+
+            if(mat.alpha < 0.0001){ // si trou dans la texture
                 r.origin = hitInfo.hitPoint;
                 is_alpha = true;
                 alpha_depth++;
+
                 continue;
             }
+                
+            if (useAO){ // calcul avec occlusion ambiante
+
+                color emittedLight = multiply_scalar(mat.emissionColor, mat.emissionStrength * 1.5 * AO_intensity);
+
+                incomingLight = add(incomingLight,multiply(emittedLight, rayColor));
+                rayColor = multiply(mat.diffuseColor, rayColor);
+
+                color occlusion = ambient_occlusion(hitInfo.hitPoint, hitInfo.normal, sphere_list, nbSpheres, triangle_list, nbTriangles, AO_intensity, mat_list, tex_width, tex_height, quelMatPourTri, sky_mat_list, sky_width, sky_height);
+                rayColor = multiply(rayColor, occlusion);
+            }
+
+            else{  // calcul sans occlusion ambiante
+
+                color emittedLight = multiply_scalar(mat.emissionColor, mat.emissionStrength);
+
+                incomingLight = add(incomingLight,multiply(emittedLight, rayColor));
+                rayColor = multiply(mat.diffuseColor, rayColor);
+            }
         }
-        else{
+        else{ // pas de hit
             break;
         }
     }
     return can_create(incomingLight, albedo_color, normal_color);
 }
+
 
 void* fill_canva(void *arg) {
     struct ThreadData* data = (struct ThreadData*)arg;
@@ -262,15 +270,15 @@ int main(){
     ////////////////////////////////////////////////////////
 
     //format du fichier
-    double ratio = 16.0 / 10.0;
-    int largeur_image = 1200;
+    double ratio = 4.0 / 3.0;
+    int largeur_image = 1000;
     int hauteur_image = (int)(largeur_image / ratio);
 
     //position de la camera
-    double vfov = 90; // fov vertical en degrée
+    double vfov = 70; // fov vertical en degrée
     
-    point3 origin = {{0.2, -0.5, 2}}; // position de la camera
-    point3 target = {{-1, 0.0, -1}}; // cible de la camera
+    point3 origin = {{0.5, 0.0, 0.0}}; // position de la camera
+    point3 target = {{0.38, -0.3, -2}}; // cible de la camera
     vec3 up = {{0, 1, 0}}; // permet de modifier la rotation selon l'axe z ({{0, 1, 0}} pour horizontal)
 
     double focus_distance = 3; // distance de mise au point (depth of field)
@@ -278,47 +286,43 @@ int main(){
     double ouverture_y = 0.0; // quantité de dof vertical
 
     //qualité et performance
-    int nbRayonParPixel = 100;
+    int nbRayonParPixel = 10;
     int nbRebondMax = 5;
     
-    #define NUM_THREADS 12 
+    #define NUM_THREADS 12
 
-    bool useDenoiser = false;
+    bool useDenoiser = true;
 
     bool useAO = false; // occlusion ambiante, rendu environ 2x plus lent
     double AO_intensity = 2.5; // supérieur à 1 pour augmenter l'intensité
 
     // chemin des fichiers de mesh
-    char* obj_file = "model3D/pyramide/pyramide_tri.obj"; // chemin du fichier obj
-    char* mtl_file = "model3D/pyramide/pyramide_tri.mtl"; // chemin du fichier mtl (textures dans le format PPM P3)
+    char* obj_file = "model3D/water/mineways_tri.obj"; // chemin du fichier obj
+    char* mtl_file = "model3D/water/mineways_tri.mtl"; // chemin du fichier mtl (textures dans le format PPM P3)
     char* sky_file = "model3D/hdr/industrial_sunset_puresky.ppm";
 
     // nom du fichier de sorties
     char nomFichier[100];
     time_t maintenant = time(NULL); // heure actuelle pour le nom du fichier
     struct tm *temps = localtime(&maintenant);
-    sprintf(nomFichier, "refraction_%dRAYS_%dRB_%02d-%02d_%02dh%02d.ppm", nbRayonParPixel, nbRebondMax-1, temps->tm_mday, temps->tm_mon + 1, temps->tm_hour, temps->tm_min);
+    sprintf(nomFichier, "refraction2_%dRAYS_%dRB_%02d-%02d_%02dh%02d.ppm", nbRayonParPixel, nbRebondMax-1, temps->tm_mday, temps->tm_mon + 1, temps->tm_hour, temps->tm_min);
 
-    // position des sphères dans la scène
-    // ATTENTION : derniere sphere = ciel
+    //position des sphères dans la scène
     sphere sphere_list[] = {
-        //{position du centre x, y, z}, rayon, {couleur de l'objet, couleur d'emission, intensité d'emission (> 1), intensité de reflection (entre 0 et 1), alpha (entre 0 et 1)}
+        //{position du centre x, y, z}, rayon, {couleur de l'objet, couleur d'emission, intensité d'emission (> 1), intensité de reflection (entre 0 et 1), indice de réfraction (si alpha < 1.0)}
         // {{{-501,0,0}}, 500, {GREEN, BLACK, 0.0, 0.96}}, // mur vert
-        // {{{0,-501,0}}, 500, {WHITE, BLACK, 0.0, 0.0, 1.0}}, // sol blanc
+        {{{0,-501,0}}, 500, {WHITE, BLACK, 0.0, 0.0, 1.0, 1.0}}, // sol blanc
         // {{{501, 0, 0}}, 500, {RED, BLACK, 0.0, 0.96}}, // mur rouge
-        // {{{-0.5, 1.9, -1.2}}, 1.0, {BLACK, {{1.0, 0.6, 0.2}}, 5.0, 0.0}}, // lumiere orange
-        // {{{5.5, 6.4, -2.2}}, 5, {BLACK, {{0.7, 0.2, 1.0}}, 5.0, 0.0}}, // lumiere violet
+        {{{-0.5, 1.9, -1.2}}, 1.0, {BLACK, {{1.0, 0.6, 0.2}}, 5.0, 0.0, 1.0, 1.0}}, // lumiere orange
+        {{{5.5, 6.4, -2.2}}, 5, {BLACK, {{0.7, 0.2, 1.0}}, 5.0, 0.0, 1.0, 1.0}}, // lumiere violet
         // {{{0.6, -1.4, -1.0}}, 0.5, {BLACK, {{0.55, 0.863, 1.0}}, 3.5, 0.0}}, // lumiere bleu clair
         // {{{-0.5, -1.4, -3.1}}, 0.5, {BLACK, {{0.431, 1.0, 0.596}}, 3.5, 0.0}}, // lumiere vert clair
         // {{{0, 0, -504}}, 500, {WHITE, BLACK, 0.0, 0.0}}, // fond blanc
         // {{{0, 501, 0}}, 500, {WHITE, BLACK, 0.0, 0.0}}, // plafond blanc
-        // {{{1.7, -0.5, -3.3}}, 0.5, {SKY, BLACK, 0.0, 0.99}}, // boule miroir
-        // {{{1.7, -1, -2.2}}, 0.3, {SKY, BLACK, 0.0, 0.85}},
-        // {{{-37.6937, 350.0, 127.6528}}, 10, {BLACK, WHITE, 100.0, 0.0}}, // soleil
-        {{{-1, 0.0, -1}}, 1, {SKY, BLACK, 0.0, 0.0, 0.0}},
-        {{{0.0, 0.0, 0.0}}, 100000, {BLACK, SKY, 1.2, 0.0, 0.0}}, // ciel
+        {{{1.9, -0.5, -3.3}}, 0.5, {SKY, BLACK, 0.0, 0.99, 1.0, 1.0}}, // boule miroir
+        {{{1.9, -1, -2.2}}, 0.3, {SKY, BLACK, 0.0, 0.85, 1.0, 1.0}},
+        {{{0.0, 0.0, 0.0}}, 1000, {BLACK, SKY, 1.2, 0.0, 1.0, 1.0}}, // ciel
         // {{{150.0, 150.0, -300.0}}, 100, {BLACK, WHITE, 2.0, 0.0}}, // soleil
-        // {{{-0.3564, 5.0224, -9.5846}}, 2, {{0.125, 0.459, 0.035}, {0.125, 0.459, 0.035}, 1.8, 0.0}},
     };
 
     ////////////////////////////////////////////////////////
@@ -338,7 +342,7 @@ int main(){
     // printf("Sommets [%d], mat[%d] : %s\n", quelSommetPourMaterial[0], 0,  mat_path_list[0]);
     // printf("\nMat numero %d pour le triangle %d et c'est le mat %s\n", quelMatPourTri[0], 0, mat_path_list[quelMatPourTri[0]]);
 
-    move_mesh(2, -10, -1, &mesh_list, nbTriangles); // translation (x, y, z) du mesh
+    move_mesh(-0.32, -1.3, -2.3, &mesh_list, nbTriangles); // translation (x, y, z) du mesh
     printf("%s : %d textures loaded\n\n", mtl_file, nbMaterials);
 
     // liste de material pour la texture du mesh
@@ -447,7 +451,7 @@ int main(){
     //     }
     // }
 
-    // // rendu normales
+    // rendu normales
     // for (int j = hauteur_image-1; j >= 0  ; j--){ 
     //     for (int i = 0; i < largeur_image; i++){
     //         int pixel_index = j*largeur_image+i;
@@ -460,7 +464,6 @@ int main(){
     free(albedo_tab);
     free(normal_tab);
     free(mesh_list);
-    // free(tex_list);
     free(mat_list);
     free(sky_mat_list);
 

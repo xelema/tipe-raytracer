@@ -9,6 +9,7 @@ typedef struct Material {
     double emissionStrength;
     double reflectionStrength;
     double alpha;
+    double materialIndex;
 } material;
 
 typedef struct {

@@ -61,10 +61,17 @@ material tri_uvmapping(triangle tri, HitInfo hitInfo, material* mat_list, int te
     int x = (int)(uv.u * (double)(texture_width));
     int y = (int)(uv.v * (double)(texture_height));
 
-    int index = (y * texture_width + x) + (texture_height * texture_width * quelMatPourSommet[indice_tri]);
+    int numero_mat = quelMatPourSommet[indice_tri];
+
+    int index = (y * texture_width + x) + (texture_height * texture_width * numero_mat);
     // printf("quelMatPourSommet[%d] : %d\n", indice_tri , quelMatPourSommet[indice_tri]);
     material res;
     res = mat_list[index];
+
+    if(numero_mat == 6 || numero_mat == 7){
+        res.reflectionStrength = 0.93;
+        res.materialIndex = 1.33;
+    }
 
     return res;
 }

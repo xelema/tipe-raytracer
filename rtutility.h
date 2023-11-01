@@ -30,9 +30,7 @@ double clamp(double x, double min, double max){
 }
 
 vec3 vec3_lerp(vec3 x, vec3 y, double t){
-    vec3 res;
-    res = add(x, multiply_scalar(sub(y, x), t));
-    return res;
+    return add(x, multiply_scalar(sub(y, x), t));
 }
 
 // void write_color(FILE *out, color pixel_color) {
@@ -209,7 +207,6 @@ vec3 reflected_vec(vec3 v, vec3 n){
     return res;
 }
 
-
 vec3 refracted_vec(vec3 v, vec3 normal, double n1, double n2){
     vec3 dir;
     
@@ -224,8 +221,6 @@ vec3 refracted_vec(vec3 v, vec3 normal, double n1, double n2){
     }
     return dir;
 }
-
-
 
 double randomDouble(double min, double max){
     return min + (max-min)*(rand()/(RAND_MAX + 1.0));
