@@ -200,6 +200,11 @@ col_alb_norm tracer(ray r, int nbRebondMax, sphere* sphere_list, int nbSpheres, 
                 color emittedLight = multiply_scalar(mat.emissionColor, mat.emissionStrength * 1.5 * AO_intensity);
 
                 incomingLight = add(incomingLight,multiply(emittedLight, rayColor));
+
+                if(rayColor.e[0] > 0.5 || rayColor.e[1] > 0.5 || rayColor.e[2] > 0.5){ 
+                    rayColor = multiply(mat.diffuseColor, multiply_scalar(rayColor, 1.7)); 
+                }
+
                 rayColor = multiply(mat.diffuseColor, rayColor);
 
                 color occlusion = ambient_occlusion(hitInfo.hitPoint, hitInfo.normal, sphere_list, nbSpheres, triangle_list, nbTriangles, AO_intensity, mat_list, tex_width, tex_height, quelMatPourTri, sky_mat_list, sky_width, sky_height);
@@ -211,6 +216,10 @@ col_alb_norm tracer(ray r, int nbRebondMax, sphere* sphere_list, int nbSpheres, 
                 color emittedLight = multiply_scalar(mat.emissionColor, mat.emissionStrength);
 
                 incomingLight = add(incomingLight,multiply(emittedLight, rayColor));
+
+                if(rayColor.e[0] > 0.5 || rayColor.e[1] > 0.5 || rayColor.e[2] > 0.5){ 
+                    rayColor = multiply(mat.diffuseColor, multiply_scalar(rayColor, 1.7)); 
+                }
                 rayColor = multiply(mat.diffuseColor, rayColor);
             }
         }
@@ -270,15 +279,15 @@ int main(){
     ////////////////////////////////////////////////////////
 
     //format du fichier
-    double ratio = 4.0 / 3.0;
-    int largeur_image = 1000;
+    double ratio = 16.0 / 10.0;
+    int largeur_image = 1200;
     int hauteur_image = (int)(largeur_image / ratio);
 
     //position de la camera
-    double vfov = 70; // fov vertical en degrée
+    double vfov = 85; // fov vertical en degrée
     
-    point3 origin = {{0.5, 0.0, 0.0}}; // position de la camera
-    point3 target = {{0.38, -0.3, -2}}; // cible de la camera
+    point3 origin = {{1.0093, 0.6161, -0.1272}}; // position de la camera
+    point3 target = {{-1.449, -0.3504, 0.1092}}; // cible de la camera
     vec3 up = {{0, 1, 0}}; // permet de modifier la rotation selon l'axe z ({{0, 1, 0}} pour horizontal)
 
     double focus_distance = 3; // distance de mise au point (depth of field)
@@ -286,43 +295,44 @@ int main(){
     double ouverture_y = 0.0; // quantité de dof vertical
 
     //qualité et performance
-    int nbRayonParPixel = 10;
-    int nbRebondMax = 5;
+    int nbRayonParPixel = 1000;
+    int nbRebondMax = 9;
     
-    #define NUM_THREADS 12
+    #define NUM_THREADS 16
 
     bool useDenoiser = true;
 
-    bool useAO = false; // occlusion ambiante, rendu environ 2x plus lent
+    bool useAO = true; // occlusion ambiante, rendu environ 2x plus lent
     double AO_intensity = 2.5; // supérieur à 1 pour augmenter l'intensité
 
     // chemin des fichiers de mesh
-    char* obj_file = "model3D/water/mineways_tri.obj"; // chemin du fichier obj
-    char* mtl_file = "model3D/water/mineways_tri.mtl"; // chemin du fichier mtl (textures dans le format PPM P3)
-    char* sky_file = "model3D/hdr/industrial_sunset_puresky.ppm";
+    char* obj_file = "model3D/RTX_MAP/nature2/mineways_doubleface_tri.obj"; // chemin du fichier obj
+    char* mtl_file = "model3D/RTX_MAP/nature2/mineways_doubleface_tri.mtl"; // chemin du fichier mtl (textures dans le format PPM P3)
+    char* sky_file = "model3D/hdr/MinecraftSkyDay2.ppm";
 
     // nom du fichier de sorties
     char nomFichier[100];
     time_t maintenant = time(NULL); // heure actuelle pour le nom du fichier
     struct tm *temps = localtime(&maintenant);
-    sprintf(nomFichier, "refraction2_%dRAYS_%dRB_%02d-%02d_%02dh%02d.ppm", nbRayonParPixel, nbRebondMax-1, temps->tm_mday, temps->tm_mon + 1, temps->tm_hour, temps->tm_min);
+    sprintf(nomFichier, "RTX_nature_%dRAYS_%dRB_%02d-%02d_%02dh%02d.ppm", nbRayonParPixel, nbRebondMax-1, temps->tm_mday, temps->tm_mon + 1, temps->tm_hour, temps->tm_min);
 
     //position des sphères dans la scène
+    // ATTENTION : derniere sphère = ciel
     sphere sphere_list[] = {
         //{position du centre x, y, z}, rayon, {couleur de l'objet, couleur d'emission, intensité d'emission (> 1), intensité de reflection (entre 0 et 1), indice de réfraction (si alpha < 1.0)}
         // {{{-501,0,0}}, 500, {GREEN, BLACK, 0.0, 0.96}}, // mur vert
-        {{{0,-501,0}}, 500, {WHITE, BLACK, 0.0, 0.0, 1.0, 1.0}}, // sol blanc
+        // {{{0,-501,0}}, 500, {WHITE, BLACK, 0.0, 0.0, 1.0, 1.0}}, // sol blanc
         // {{{501, 0, 0}}, 500, {RED, BLACK, 0.0, 0.96}}, // mur rouge
-        {{{-0.5, 1.9, -1.2}}, 1.0, {BLACK, {{1.0, 0.6, 0.2}}, 5.0, 0.0, 1.0, 1.0}}, // lumiere orange
-        {{{5.5, 6.4, -2.2}}, 5, {BLACK, {{0.7, 0.2, 1.0}}, 5.0, 0.0, 1.0, 1.0}}, // lumiere violet
+        // {{{-0.5, 1.9, -1.2}}, 1.0, {BLACK, {{1.0, 0.6, 0.2}}, 5.0, 0.0, 1.0, 1.0}}, // lumiere orange
+        // {{{5.5, 6.4, -2.2}}, 5, {BLACK, {{0.7, 0.2, 1.0}}, 5.0, 0.0, 1.0, 1.0}}, // lumiere violet
         // {{{0.6, -1.4, -1.0}}, 0.5, {BLACK, {{0.55, 0.863, 1.0}}, 3.5, 0.0}}, // lumiere bleu clair
         // {{{-0.5, -1.4, -3.1}}, 0.5, {BLACK, {{0.431, 1.0, 0.596}}, 3.5, 0.0}}, // lumiere vert clair
         // {{{0, 0, -504}}, 500, {WHITE, BLACK, 0.0, 0.0}}, // fond blanc
         // {{{0, 501, 0}}, 500, {WHITE, BLACK, 0.0, 0.0}}, // plafond blanc
-        {{{1.9, -0.5, -3.3}}, 0.5, {SKY, BLACK, 0.0, 0.99, 1.0, 1.0}}, // boule miroir
-        {{{1.9, -1, -2.2}}, 0.3, {SKY, BLACK, 0.0, 0.85, 1.0, 1.0}},
-        {{{0.0, 0.0, 0.0}}, 1000, {BLACK, SKY, 1.2, 0.0, 1.0, 1.0}}, // ciel
-        // {{{150.0, 150.0, -300.0}}, 100, {BLACK, WHITE, 2.0, 0.0}}, // soleil
+        // {{{1.9, -0.5, -3.3}}, 0.5, {SKY, BLACK, 0.0, 0.99, 1.0, 1.0}}, // boule miroir
+        // {{{1.9, -1, -2.2}}, 0.3, {SKY, BLACK, 0.0, 0.85, 1.0, 1.0}},
+        {{{0.5145, 2.7877, -1.1792}}, 0.1, {BLACK, WHITE, 70.0, 0.0, 1.0, 1.0}}, // soleil
+        {{{0.0, 0.0, 0.0}}, 100000, {BLACK, SKY, 1.0, 0.0, 1.0, 1.0}}, // ciel
     };
 
     ////////////////////////////////////////////////////////
@@ -342,7 +352,7 @@ int main(){
     // printf("Sommets [%d], mat[%d] : %s\n", quelSommetPourMaterial[0], 0,  mat_path_list[0]);
     // printf("\nMat numero %d pour le triangle %d et c'est le mat %s\n", quelMatPourTri[0], 0, mat_path_list[quelMatPourTri[0]]);
 
-    move_mesh(-0.32, -1.3, -2.3, &mesh_list, nbTriangles); // translation (x, y, z) du mesh
+    move_mesh(0, 0, 0, &mesh_list, nbTriangles); // translation (x, y, z) du mesh
     printf("%s : %d textures loaded\n\n", mtl_file, nbMaterials);
 
     // liste de material pour la texture du mesh

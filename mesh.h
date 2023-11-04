@@ -182,9 +182,10 @@ triangle* list_of_mesh(const char *filename, const char *mtl_file, int *numTrian
         }
     }
 
-    for(int i = 0; i<nbMaterial; i++){
-        printf("Triangle : [%d], Mat[%d] : %s\n", (*quelSommetPourMat_list_ptr)[i], i,  mat_path_list[i]);
+    for(int i = 0; i<nbMaterial-1; i++){
+        printf("Triangles[%d...%d], Mat[%d] : %s\n", (*quelSommetPourMat_list_ptr)[i], (*quelSommetPourMat_list_ptr)[i+1]-1, i,  mat_path_list[i]);
     }
+    printf("Triangles[%d...%d], Mat[%d] : %s\n\n", (*quelSommetPourMat_list_ptr)[nbMaterial-1], nbTriangle, nbMaterial-1, mat_path_list[nbMaterial-1]);
 
     // for(int i = 0; i<nbTriangle; i++){
     //     printf("Mat : [%d], Triangle : [%d] : %s\n", (*quelMatPourSommet_list_ptr)[i], i,  mat_path_list[(*quelMatPourSommet_list_ptr)[i]-1]);
