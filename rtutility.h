@@ -208,7 +208,11 @@ vec3 reflected_vec(vec3 v, vec3 n){
 }
 
 vec3 refracted_vec(vec3 v, vec3 normal, double n1, double n2){
+    // Bonnel
     vec3 dir;
+    
+    n1*=n1;
+    n2*=n2;
     
     double radical = 1 - ((n1/n2)*(n1/n2)) * (1 - (vec3_dot(normal, v)*vec3_dot(normal, v)));
     if(radical > 0){

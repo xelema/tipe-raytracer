@@ -85,7 +85,7 @@ HitInfo hit_triangle(triangle tri, ray r){
     double w = 1 - u - v;
 
     HitInfo hitInfo;
-    hitInfo.didHit = det >= 1E-6 && dst >= 0.00001 && u >= 0.00001 && v >= 0.00001 && w >= 0.00001;
+    hitInfo.didHit = det >= 1E-6 && dst >= 0.0000001 && u >= 0.0000001 && v >= 0.0000001 && w >= 0.0000001;
     hitInfo.hitPoint = add(r.origin, multiply_scalar(r.dir, dst));
     hitInfo.normal = vec3_normalize(normalVect);
     hitInfo.dst = dst;

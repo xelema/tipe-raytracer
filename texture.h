@@ -68,9 +68,22 @@ material tri_uvmapping(triangle tri, HitInfo hitInfo, material* mat_list, int te
     material res;
     res = mat_list[index];
 
-    if(numero_mat == 11){
-        res.reflectionStrength = 0.98; // de l'eau qui brilleeeeeee
+    if(numero_mat == 1){
+        res.emissionColor = (color)WHITE;
+        res.emissionStrength = 1.85;
+        res.alpha = 1.0;
+    }
+
+    if(numero_mat == 4){
+        res.alpha = 0.6;
         res.materialIndex = 1.33;
+        res.reflectionStrength = 0.93;
+    }
+
+    if(numero_mat == 3){
+        res.alpha = 0.1;
+        res.materialIndex = 1.50;
+        res.reflectionStrength = 0.3;
     }
 
     return res;

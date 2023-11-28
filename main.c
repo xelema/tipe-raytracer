@@ -17,6 +17,7 @@
 #include "denoiser.h"
 #include "mesh.h"
 #include "texture.h"
+#include "pile.h"
 
 struct ThreadData {
     int start_row, end_row;
@@ -61,18 +62,18 @@ HitInfo closest_hit(ray r, sphere* sphere_list, int nbSpheres, triangle* triangl
         if (hitInfo.didHit && hitInfo.dst < closestHit.dst){
 
             // cas du ciel
-            if (i==nbSpheres-1){
-                material sky_mat = sphere_uvmapping(s, hitInfo, sky_mat_list, sky_width, sky_height);
-                closestHit = hitInfo;
-                closestHit.mat = s.mat;
-                closestHit.mat.emissionColor = sky_mat.diffuseColor;
-                closestHit.mat.alpha = 1.0;
-            }
+            // if (i==nbSpheres-1){
+            //     material sky_mat = sphere_uvmapping(s, hitInfo, sky_mat_list, sky_width, sky_height);
+            //     closestHit = hitInfo;
+            //     closestHit.mat = s.mat;
+            //     closestHit.mat.emissionColor = sky_mat.diffuseColor;
+            //     closestHit.mat.alpha = 1.0;
+            // }
 
-            else{
+            // else{
                 closestHit = hitInfo;
                 closestHit.mat = s.mat;
-            } 
+            // } 
         }
     }
 
@@ -123,6 +124,10 @@ col_alb_norm tracer(ray r, int nbRebondMax, sphere* sphere_list, int nbSpheres, 
     color alpha_color = WHITE; // denoiser
     bool is_alpha = false; // denoiser
     int alpha_depth = 0;
+    double n1, n2 = 1.0;
+    pile* n_pile = init_pile();
+    empiler(n_pile, 1.0, 1.0);
+    IndRef ind_depile;
 
     for (int i = 0; i<nbRebondMax; i++){
 
@@ -160,16 +165,21 @@ col_alb_norm tracer(ray r, int nbRebondMax, sphere* sphere_list, int nbSpheres, 
             vec3 diff_ref_dir = vec3_lerp(diffuse_dir, reflected_dir, mat.reflectionStrength);
 
             if (mat.alpha <= 0.99 && mat.alpha >= 0.0001){ // cas de la réfraction   
-                double n1 = 1.0;
-                double n2 = mat.materialIndex;
                 vec3 normal = hitInfo.normal;
+                index_suivant_pile(n_pile, mat.materialIndex);
+
+                ind_depile = info_pile_actuelle(n_pile);
+                n1 = ind_depile.n[0];
+                n2 = ind_depile.n[1];
 
                 if(vec3_dot(r.dir, hitInfo.normal) > 0){ // on sort de l'objet
                     normal = vec3_negate(hitInfo.normal);
-                    n1 = mat.materialIndex;
-                    n2 = 1.0;
-                }
 
+                    ind_depile = depiler(n_pile);
+                    n1 = ind_depile.n[1];
+                    n2 = ind_depile.n[0];
+                }
+                
                 vec3 refracted_dir = refracted_vec(r.dir, normal, n1, n2);
                 
                 double rnd = randomDouble(0, 1); // parfois réflection, parfois réfraction (en fonction de la valeur d'alpha)
@@ -202,7 +212,7 @@ col_alb_norm tracer(ray r, int nbRebondMax, sphere* sphere_list, int nbSpheres, 
                 incomingLight = add(incomingLight,multiply(emittedLight, rayColor));
 
                 if(rayColor.e[0] > 0.5 || rayColor.e[1] > 0.5 || rayColor.e[2] > 0.5){ 
-                    rayColor = multiply(mat.diffuseColor, multiply_scalar(rayColor, 1.7)); 
+                    rayColor = multiply(mat.diffuseColor, multiply_scalar(rayColor, 1.3)); 
                 }
 
                 rayColor = multiply(mat.diffuseColor, rayColor);
@@ -218,7 +228,7 @@ col_alb_norm tracer(ray r, int nbRebondMax, sphere* sphere_list, int nbSpheres, 
                 incomingLight = add(incomingLight,multiply(emittedLight, rayColor));
 
                 if(rayColor.e[0] > 0.5 || rayColor.e[1] > 0.5 || rayColor.e[2] > 0.5){ 
-                    rayColor = multiply(mat.diffuseColor, multiply_scalar(rayColor, 1.7)); 
+                    rayColor = multiply(mat.diffuseColor, multiply_scalar(rayColor, 1.3)); 
                 }
                 rayColor = multiply(mat.diffuseColor, rayColor);
             }
@@ -227,6 +237,7 @@ col_alb_norm tracer(ray r, int nbRebondMax, sphere* sphere_list, int nbSpheres, 
             break;
         }
     }
+    free(n_pile);
     return can_create(incomingLight, albedo_color, normal_color);
 }
 
@@ -280,14 +291,14 @@ int main(){
 
     //format du fichier
     double ratio = 16.0 / 10.0;
-    int largeur_image = 1200;
+    int largeur_image = 1000;
     int hauteur_image = (int)(largeur_image / ratio);
 
     //position de la camera
-    double vfov = 85; // fov vertical en degrée
+    double vfov = 30.2 ; // fov vertical en degrée
     
-    point3 origin = {{1.0093, 0.6161, -0.1272}}; // position de la camera
-    point3 target = {{-1.449, -0.3504, 0.1092}}; // cible de la camera
+    point3 origin = {{237.6461, 144.496 , -962.8788}}; // position de la camera
+    point3 target = {{-176.9382, 141.5864, 651.8203}}; // cible de la camera
     vec3 up = {{0, 1, 0}}; // permet de modifier la rotation selon l'axe z ({{0, 1, 0}} pour horizontal)
 
     double focus_distance = 3; // distance de mise au point (depth of field)
@@ -295,26 +306,26 @@ int main(){
     double ouverture_y = 0.0; // quantité de dof vertical
 
     //qualité et performance
-    int nbRayonParPixel = 1000;
-    int nbRebondMax = 9;
+    int nbRayonParPixel = 100;
+    int nbRebondMax = 20;
     
     #define NUM_THREADS 16
 
-    bool useDenoiser = true;
+    bool useDenoiser = false;
 
-    bool useAO = true; // occlusion ambiante, rendu environ 2x plus lent
+    bool useAO = false; // occlusion ambiante, rendu environ 2x plus lent
     double AO_intensity = 2.5; // supérieur à 1 pour augmenter l'intensité
 
     // chemin des fichiers de mesh
-    char* obj_file = "model3D/RTX_MAP/nature2/mineways_doubleface_tri.obj"; // chemin du fichier obj
-    char* mtl_file = "model3D/RTX_MAP/nature2/mineways_doubleface_tri.mtl"; // chemin du fichier mtl (textures dans le format PPM P3)
+    char* obj_file = "model3D/pyramide_eau/scene.obj"; // chemin du fichier obj
+    char* mtl_file = "model3D/pyramide_eau/scene.mtl"; // chemin du fichier mtl (textures dans le format PPM P3)
     char* sky_file = "model3D/hdr/MinecraftSkyDay2.ppm";
 
     // nom du fichier de sorties
     char nomFichier[100];
     time_t maintenant = time(NULL); // heure actuelle pour le nom du fichier
     struct tm *temps = localtime(&maintenant);
-    sprintf(nomFichier, "RTX_nature_%dRAYS_%dRB_%02d-%02d_%02dh%02d.ppm", nbRayonParPixel, nbRebondMax-1, temps->tm_mday, temps->tm_mon + 1, temps->tm_hour, temps->tm_min);
+    sprintf(nomFichier, "pyramide_eau_%dRAYS_%dRB_%02d-%02d_%02dh%02d.ppm", nbRayonParPixel, nbRebondMax-1, temps->tm_mday, temps->tm_mon + 1, temps->tm_hour, temps->tm_min);
 
     //position des sphères dans la scène
     // ATTENTION : derniere sphère = ciel
@@ -331,8 +342,8 @@ int main(){
         // {{{0, 501, 0}}, 500, {WHITE, BLACK, 0.0, 0.0}}, // plafond blanc
         // {{{1.9, -0.5, -3.3}}, 0.5, {SKY, BLACK, 0.0, 0.99, 1.0, 1.0}}, // boule miroir
         // {{{1.9, -1, -2.2}}, 0.3, {SKY, BLACK, 0.0, 0.85, 1.0, 1.0}},
-        {{{0.5145, 2.7877, -1.1792}}, 0.1, {BLACK, WHITE, 70.0, 0.0, 1.0, 1.0}}, // soleil
-        {{{0.0, 0.0, 0.0}}, 100000, {BLACK, SKY, 1.0, 0.0, 1.0, 1.0}}, // ciel
+        // {{{0.5145, 2.7877, -1.1792}}, 0.1, {BLACK, WHITE, 70.0, 0.0, 1.0, 1.0}}, // soleil
+        // {{{0.0, 0.0, 0.0}}, 100000, {BLACK, SKY, 1.0, 0.0, 1.0, 1.0}}, // ciel
     };
 
     ////////////////////////////////////////////////////////
